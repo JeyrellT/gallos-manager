@@ -31,7 +31,7 @@ const Header = ({ searchTerm, setSearchTerm, setMobileMenuOpen }) => {
 
   return (
     <header className="bg-white shadow-sm z-10">
-      <div className="px-4 py-2 flex items-center justify-between">
+      <div className="px-4 py-2 flex items-center justify-between md:px-6"> {/* Ajuste de padding para pantallas más grandes */}
         {/* Botón de menú móvil */}
         <button
           className="md:hidden rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-600 focus:outline-none"
@@ -42,7 +42,7 @@ const Header = ({ searchTerm, setSearchTerm, setMobileMenuOpen }) => {
         </button>
 
         {/* Buscador */}
-        <div className="relative flex-1 max-w-xl mx-4">
+        <div className="relative flex-1 max-w-xl mx-4 md:mx-6"> {/* Ajuste de márgenes */}
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Search className="h-5 w-5 text-gray-400" />
           </div>
@@ -54,40 +54,40 @@ const Header = ({ searchTerm, setSearchTerm, setMobileMenuOpen }) => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+      </div>
 
-        {/* Acciones */}
-        <div className="flex items-center space-x-2">
-          {/* Botón para guardar en GitHub */}
-          {isGithubConnected && (
-            <button
-              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              onClick={saveDataToGitHub}
-              disabled={syncStatus === 'syncing'}
-            >
-              <Save className="h-4 w-4 mr-1" />
-              <span className="hidden sm:inline">Guardar en</span> 
-              <Github className="h-4 w-4 ml-1" />
-            </button>
-          )}
-
-          {/* Botón para exportar datos */}
+      {/* Acciones */}
+      <div className="flex items-center space-x-2">
+        {/* Botón para guardar en GitHub */}
+        {isGithubConnected && (
           <button
-            className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            onClick={handleExportData}
+            className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            onClick={saveDataToGitHub}
+            disabled={syncStatus === 'syncing'}
           >
-            <Download className="h-4 w-4 mr-1" />
-            <span className="hidden sm:inline">JSON</span>
+            <Save className="h-4 w-4 mr-1" />
+            <span className="hidden sm:inline">Guardar en</span> 
+            <Github className="h-4 w-4 ml-1" />
           </button>
+        )}
 
-          {/* Botón para exportar a Excel */}
-          <button
-            className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            onClick={handleExportExcel}
-          >
-            <Download className="h-4 w-4 mr-1" />
-            <span className="hidden sm:inline">Excel</span>
-          </button>
-        </div>
+        {/* Botón para exportar datos */}
+        <button
+          className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          onClick={handleExportData}
+        >
+          <Download className="h-4 w-4 mr-1" />
+          <span className="hidden sm:inline">JSON</span>
+        </button>
+
+        {/* Botón para exportar a Excel */}
+        <button
+          className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          onClick={handleExportExcel}
+        >
+          <Download className="h-4 w-4 mr-1" />
+          <span className="hidden sm:inline">Excel</span>
+        </button>
       </div>
     </header>
   );

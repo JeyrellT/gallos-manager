@@ -83,3 +83,18 @@ body {
 .notification-exit {
   animation: slideOutRight 0.3s forwards;
 }
+
+/* Media queries para pantallas pequeñas */
+@media (max-width: 768px) {
+  body {
+    @apply text-sm;
+  }
+
+  .table-responsive table {
+    @apply text-xs;
+  }
+
+  .loading-pulse {
+    @apply w-4 h-4;
+  }
+}

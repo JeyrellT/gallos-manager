@@ -1,12 +1,13 @@
 // src/components/CuidadosMedicosList.jsx
 import React, { useState, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
-import { Heart, Plus, Trash2, Eye } from 'lucide-react';
+import { Heart, Plus, Trash2, Eye, X, Edit2 } from 'lucide-react';
 
-const CuidadosMedicosList = ({ searchTerm }) => {
+const CuidadosMedicosList = ({ searchTerm, setActiveTab, onSelectGallo }) => {
   const { cuidadosMedicos, gallos, updateData, showNotification } = useData();
   const [filteredCuidados, setFilteredCuidados] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingCuidado, setEditingCuidado] = useState(null);
   const [formData, setFormData] = useState({
     id_gallo: '',
     tipo: '',
@@ -137,6 +138,56 @@ const CuidadosMedicosList = ({ searchTerm }) => {
     return new Date(dateString).toLocaleDateString('es-ES', options);
   };
 
+  const handleEditClick = (cuidado) => {
+    setEditingCuidado(cuidado);
+    setFormData({
+      id_gallo: cuidado.id_gallo,
+      tipo: cuidado.tipo,
+      descripcion: cuidado.descripcion,
+      fecha: cuidado.fecha
+    });
+    setShowAddForm(true);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+    
+    if (editingCuidado) {
+      // Modo edición
+      const updatedCuidados = cuidadosMedicos.map(cuidado =>
+        cuidado.id_cuidado === editingCuidado.id_cuidado
+          ? { ...cuidado, ...formData }
+          : cuidado
+      );
+      
+      updateData('Cuidados_Medicos', updatedCuidados);
+      showNotification('Cuidado médico actualizado correctamente');
+    } else {
+      // Modo creación
+      const newId = Date.now().toString();
+      const newCuidado = {
+        id_cuidado: newId,
+        ...formData
+      };
+      
+      const updatedCuidados = [...cuidadosMedicos, newCuidado];
+      updateData('Cuidados_Medicos', updatedCuidados);
+      showNotification('Cuidado médico registrado correctamente');
+    }
+    
+    // Resetear formulario
+    setFormData({
+      id_gallo: '',
+      tipo: '',
+      descripcion: '',
+      fecha: ''
+    });
+    setShowAddForm(false);
+    setEditingCuidado(null);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -145,19 +196,27 @@ const CuidadosMedicosList = ({ searchTerm }) => {
           Cuidados Médicos
         </h1>
         <button
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          onClick={() => setShowAddForm(!showAddForm)}
+          className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${showAddForm ? 'bg-red-600 hover:bg-red-700' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+          onClick={() => {
+            if (showAddForm) {
+              setFormData({ id_gallo: '', tipo: '', descripcion: '', fecha: '' });
+              setEditingCuidado(null);
+            }
+            setShowAddForm(!showAddForm);
+          }}
         >
-          <Plus className="mr-2 h-4 w-4" /> Registrar Cuidado Médico
+          {showAddForm ? <X className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
+          {showAddForm ? 'Cancelar' : 'Registrar Cuidado Médico'}
         </button>
       </div>
       
-      {/* Formulario para agregar */}
+      {/* Formulario para agregar/editar */}
       {showAddForm && (
         <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Registrar Nuevo Cuidado Médico</h2>
-          
-          <form onSubmit={handleAddCuidado}>
+          <h2 className="text-lg font-medium text-gray-900 mb-4">
+            {editingCuidado ? 'Editar Cuidado Médico' : 'Registrar Nuevo Cuidado Médico'}
+          </h2>
+          <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="id_gallo" className="block text-sm font-medium text-gray-700">
@@ -247,7 +306,7 @@ const CuidadosMedicosList = ({ searchTerm }) => {
                 type="submit"
                 className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
-                Guardar
+                {editingCuidado ? 'Actualizar' : 'Guardar'}
               </button>
             </div>
           </form>
@@ -306,12 +365,19 @@ const CuidadosMedicosList = ({ searchTerm }) => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
                         <button
+                          className="text-blue-600 hover:text-blue-900"
+                          onClick={() => handleEditClick(cuidado)}
+                          title="Editar"
+                        >
+                          <Edit2 size={18} />
+                        </button>
+                        <button
                           className="text-indigo-600 hover:text-indigo-900"
                           onClick={() => {
                             const gallo = gallos.find(g => g.id_gallo === cuidado.id_gallo);
                             if (gallo) {
-                              // Navegar a detalles del gallo (implementar lógica)
-                              console.log('Ver detalles del gallo:', gallo);
+                              setActiveTab('Gallo');
+                              onSelectGallo(gallo);
                             }
                           }}
                           title="Ver gallo"

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useData } from '../contexts/DataContext';
-import { SprayCan, Plus, Trash2, ChevronDown, ChevronUp, X, CalendarClock } from 'lucide-react';
+import { SprayCan, Plus, Trash2, ChevronDown, ChevronUp, X, CalendarClock, Edit2 } from 'lucide-react';
 import { parseISO, addDays, addWeeks, addMonths, format, isBefore, addYears } from 'date-fns';
 
 const initialFormData = {
@@ -19,6 +19,7 @@ const HigieneList = ({ searchTerm }) => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [sortConfig, setSortConfig] = useState({ key: 'fecha', direction: 'descending' });
   const [formData, setFormData] = useState(initialFormData);
+  const [editingHigiene, setEditingHigiene] = useState(null);
 
   const handleGalloSelectionChange = (id) => {
     setFormData((prev) => {
@@ -240,6 +241,96 @@ const HigieneList = ({ searchTerm }) => {
       </th>
     );
 
+  const handleEditClick = (item) => {
+    setEditingHigiene(item);
+    setFormData({
+      selectedGalloIds: [item.id_gallo],
+      tipo: item.tipo,
+      descripcion: item.descripcion,
+      fecha: item.fecha,
+      isRecurrente: false,
+      fechaFinal: '',
+      frecuencia: 'diario',
+    });
+    setShowAddForm(true);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    if (editingHigiene) {
+      // Modo edición
+      const updatedHigiene = higiene.map(item =>
+        item.id_higiene === editingHigiene.id_higiene
+          ? {
+              ...item,
+              id_gallo: formData.selectedGalloIds[0],
+              tipo: formData.tipo,
+              descripcion: formData.descripcion,
+              fecha: formData.fecha,
+            }
+          : item
+      );
+      
+      updateData('Higiene', updatedHigiene);
+      showNotification('Registro de higiene actualizado correctamente');
+    } else {
+      // Modo creación (mantener lógica existente)
+      const batchRecords = [];
+      
+      for (const galloId of formData.selectedGalloIds) {
+        if (formData.isRecurrente) {
+          let currentDate = parseISO(formData.fecha);
+          const finalDate = parseISO(formData.fechaFinal);
+          
+          while (isBefore(currentDate, finalDate) || format(currentDate, 'yyyy-MM-dd') === format(finalDate, 'yyyy-MM-dd')) {
+            batchRecords.push({
+              id_higiene: `${Date.now()}-${galloId}-${format(currentDate, 'yyyyMMdd')}`,
+              id_gallo: galloId,
+              tipo: formData.tipo,
+              descripcion: formData.descripcion,
+              fecha: format(currentDate, 'yyyy-MM-dd'),
+            });
+            
+            switch (formData.frecuencia) {
+              case 'diario':
+                currentDate = addDays(currentDate, 1);
+                break;
+              case 'semanal':
+                currentDate = addWeeks(currentDate, 1);
+                break;
+              case 'mensual':
+                currentDate = addMonths(currentDate, 1);
+                break;
+              case 'anual':
+                currentDate = addYears(currentDate, 1);
+                break;
+              default:
+                currentDate = addDays(currentDate, 1);
+            }
+          }
+        } else {
+          batchRecords.push({
+            id_higiene: `${Date.now()}-${galloId}`,
+            id_gallo: galloId,
+            tipo: formData.tipo,
+            descripcion: formData.descripcion,
+            fecha: formData.fecha,
+          });
+        }
+      }
+      
+      const updatedHigiene = [...higiene, ...batchRecords];
+      updateData('Higiene', updatedHigiene);
+      showNotification(`${batchRecords.length} registro(s) de higiene ${formData.isRecurrente ? 'programados' : 'agregados'}.`);
+    }
+    
+    setFormData(initialFormData);
+    setShowAddForm(false);
+    setEditingHigiene(null);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -264,7 +355,7 @@ const HigieneList = ({ searchTerm }) => {
       {showAddForm && (
         <div className="bg-white rounded-lg shadow-sm p-6 border border-indigo-200">
           <h2 className="text-lg font-medium text-gray-900 mb-4">Nuevo Registro de Higiene</h2>
-          <form onSubmit={handleAddHigiene}>
+          <form onSubmit={handleSubmit}>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                <div className="md:col-span-3">
                  <label className="block text-sm font-medium text-gray-700">Gallos*</label>
@@ -389,6 +480,9 @@ const HigieneList = ({ searchTerm }) => {
                     <td className="px-6 py-4 text-sm text-gray-500 max-w-md truncate" title={item.descripcion}>{item.descripcion}</td>
                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                        <div className="flex space-x-2">
+                         <button onClick={() => handleEditClick(item)} className="text-blue-500 hover:text-blue-700 transition-colors duration-150" title="Editar">
+                           <Edit2 size={18} />
+                         </button>
                          <button onClick={() => handleDeleteHigiene(item.id_higiene)} className="text-red-500 hover:text-red-700 transition-colors duration-150" title="Eliminar">
                            <Trash2 size={18} />
                          </button>

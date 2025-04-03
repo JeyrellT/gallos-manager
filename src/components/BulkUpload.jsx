@@ -189,95 +189,44 @@ const BulkUpload = () => {
   
   // Exportar plantillas individuales
   const exportTemplate = (type) => {
-    // Datos de ejemplo para plantillas
+    // Datos de ejemplo para plantillas con todos los campos requeridos
     const templateData = {
-      Gallo: [
-        { 
-          id_gallo: '1', 
-          nombre: 'Ejemplo Gallo', 
-          raza: 'Raza Ejemplo', 
-          peso_actual: '2500', 
-          estado: 'Activo', 
-          fecha_nacimiento: '2023-01-01',
-          sexo: 'Macho',
-          id_linea: '1'
-        }
-      ],
-      Linea_Genetica: [
-        {
-          id_linea: '1',
-          nombre_linea: 'Ejemplo Línea',
-          descripcion: 'Descripción de la línea genética de ejemplo'
-        }
-      ],
-      Peleas: [
-        {
-          id_pelea: '1',
-          id_gallo: '1',
-          fecha: '2023-05-15',
-          resultado: 'Victoria',
-          duracion_min: 12,
-          peso_antes: 2500,
-          peso_despues: 2480
-        }
-      ],
-      Cuidados_Medicos: [
-        {
-          id_cuidado: '1',
-          id_gallo: '1',
-          tipo: 'Vacuna',
-          descripcion: 'Vacuna contra Newcastle',
-          fecha: '2023-03-10'
-        }
-      ],
-      Entrenamientos: [
-        {
-          id_entrenamiento: '1',
-          id_gallo: '1',
-          tipo: 'Carrera',
-          duracion_min: 30,
-          intensidad: 'Alta',
-          fecha: '2023-04-05'
-        }
-      ],
-      Alimentacion: [
-        {
-          id_alimentacion: '1',
-          id_gallo: '1',
-          tipo_alimento: 'Grano',
-          cantidad_g: 150,
-          fecha: '2023-04-01'
-        }
-      ],
-      Higiene: [
-        {
-          id_higiene: '1',
-          id_gallo: '1',
-          tipo: 'Limpieza',
-          descripcion: 'Limpieza de plumas',
-          fecha: '2023-03-15'
-        }
-      ],
-      Control_Pesos: [
-        {
-          id_control: '1',
-          id_gallo: '1',
-          peso_g: 2500,
-          fecha: '2023-03-01'
-        }
-      ]
+      Gallo: [{ 
+        id_gallo: '1', 
+        nombre: 'Ejemplo Gallo', 
+        raza: 'Raza Ejemplo', 
+        peso_actual: '2500', 
+        estado: 'Activo', 
+        fecha_nacimiento: '2023-01-01',
+        sexo: 'Macho',
+        altura: '25',
+        color: 'Negro',
+        descripcion: 'Descripción del gallo',
+        id_linea: '1',
+        notas: 'Notas adicionales'
+      }],
+      Linea_Genetica: [{
+        id_linea: '1',
+        nombre_linea: 'Ejemplo Línea',
+        descripcion: 'Descripción detallada de la línea genética',
+        origen: 'Origen de la línea',
+        caracteristicas: 'Características principales'
+      }],
+      // ...resto de las entidades con sus campos completos...
     };
-    
+
     if (type === 'json') {
-      // Exportar como JSON
       exportImportUtils.downloadString(
         JSON.stringify(templateData, null, 2),
         'plantilla_completa.json',
         'application/json'
       );
     } else if (type === 'csv') {
-      // Exportar como CSV - Solo la entidad seleccionada
       const entityData = templateData[entity];
+      if (!entityData) {
+        showNotification('Error: Entidad no encontrada en la plantilla', 'error');
+        return;
+      }
       const csvContent = exportImportUtils.entityToCsv(entityData);
       exportImportUtils.downloadString(
         csvContent,
@@ -285,12 +234,40 @@ const BulkUpload = () => {
         'text/csv'
       );
     } else if (type === 'excel') {
-      // Exportar plantilla Excel con todas las entidades
-      const excelBlob = exportImportUtils.createMultiSheetExcelTemplate();
+      const excelBlob = exportImportUtils.createMultiSheetExcelTemplate(templateData);
       exportImportUtils.downloadBlob(
         excelBlob,
         'plantilla_completa.xlsx'
       );
+    }
+  };
+  
+  // Manejar la exportación a Excel
+  const handleExportExcel = () => {
+    try {
+      const jsonData = JSON.parse(exportDataToJson());
+      const excelBlob = exportImportUtils.entitiesToExcel(jsonData);
+      exportImportUtils.downloadBlob(excelBlob, 'gallos_manager_data.xlsx');
+      showNotification('Datos exportados correctamente a Excel', 'success');
+    } catch (error) {
+      console.error('Error al exportar a Excel:', error);
+      showNotification(`Error al exportar a Excel: ${error.message}`, 'error');
+    }
+  };
+  
+  // Manejar la exportación a JSON
+  const handleExportJson = () => {
+    try {
+      const jsonData = exportDataToJson();
+      exportImportUtils.downloadString(
+        jsonData,
+        'gallos_manager_data.json',
+        'application/json'
+      );
+      showNotification('Datos exportados correctamente a JSON', 'success');
+    } catch (error) {
+      console.error('Error al exportar a JSON:', error);
+      showNotification(`Error al exportar a JSON: ${error.message}`, 'error');
     }
   };
   
@@ -670,10 +647,18 @@ const BulkUpload = () => {
           <button
             type="button"
             className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            onClick={() => exportDataToJson()}
+            onClick={handleExportJson}
           >
             <Download className="mr-2 h-4 w-4" />
-            Exportar copia de seguridad
+            Exportar copia de seguridad (JSON)
+          </button>
+          <button
+            type="button"
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            onClick={handleExportExcel}
+          >
+            <FileSpreadsheet className="mr-2 h-4 w-4" />
+            Exportar copia de seguridad (Excel)
           </button>
         </div>
       </div>
@@ -718,6 +703,24 @@ const BulkUpload = () => {
           <Upload className="mr-2 text-indigo-500" size={24} />
           Subida Masiva de Datos
         </h1>
+        <div className="flex space-x-2">
+          <button
+            type="button"
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+            onClick={handleExportJson}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Descargar JSON
+          </button>
+          <button
+            type="button"
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            onClick={handleExportExcel}
+          >
+            <FileSpreadsheet className="mr-2 h-4 w-4" />
+            Descargar Excel
+          </button>
+        </div>
       </div>
       
       {/* Mostrar paso actual */}

@@ -1,7 +1,7 @@
 // src/components/EntrenamientosList.jsx
 import React, { useState, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
-import { Activity, Plus, Trash2, Eye, X, CalendarClock } from 'lucide-react';
+import { Activity, Plus, Trash2, Eye, X, CalendarClock, Edit2 } from 'lucide-react';
 import { parseISO, addDays, addWeeks, addMonths, format, isBefore, addYears } from 'date-fns';
 
 const initialFormData = {
@@ -15,10 +15,11 @@ const initialFormData = {
   frecuencia: 'diario',
 };
 
-const EntrenamientosList = ({ searchTerm }) => {
+const EntrenamientosList = ({ searchTerm, setActiveTab, onSelectGallo }) => {
   const { entrenamientos, gallos, updateData, showNotification } = useData();
   const [filteredEntrenamientos, setFilteredEntrenamientos] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingEntrenamiento, setEditingEntrenamiento] = useState(null);
   const [formData, setFormData] = useState(initialFormData);
 
   // Filtrar entrenamientos cuando cambia el término de búsqueda
@@ -216,6 +217,102 @@ const EntrenamientosList = ({ searchTerm }) => {
     return new Date(dateString).toLocaleDateString('es-ES', options);
   };
 
+  const handleEditClick = (entrenamiento) => {
+    setEditingEntrenamiento(entrenamiento);
+    setFormData({
+      selectedGalloIds: [entrenamiento.id_gallo],
+      tipo: entrenamiento.tipo,
+      duracion_min: entrenamiento.duracion_min?.toString() || '',
+      intensidad: entrenamiento.intensidad || 'Media',
+      fecha: entrenamiento.fecha,
+      isRecurrente: false, // Reset recurrence when editing
+      fechaFinal: '',
+      frecuencia: 'diario',
+    });
+    setShowAddForm(true);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    if (editingEntrenamiento) {
+      // Modo edición
+      const updatedEntrenamientos = entrenamientos.map(entrenamiento =>
+        entrenamiento.id_entrenamiento === editingEntrenamiento.id_entrenamiento
+          ? {
+              ...entrenamiento,
+              id_gallo: formData.selectedGalloIds[0],
+              tipo: formData.tipo,
+              duracion_min: formData.duracion_min ? parseFloat(formData.duracion_min) : null,
+              intensidad: formData.intensidad,
+              fecha: formData.fecha,
+            }
+          : entrenamiento
+      );
+      
+      updateData('Entrenamientos', updatedEntrenamientos);
+      showNotification('Entrenamiento actualizado correctamente');
+    } else {
+      // Modo creación (mantener lógica existente de creación recurrente)
+      const batchRecords = [];
+      
+      for (const galloId of formData.selectedGalloIds) {
+        let currentDate = parseISO(formData.fecha);
+        const finalDate = formData.isRecurrente ? parseISO(formData.fechaFinal) : currentDate;
+        
+        if (formData.isRecurrente) {
+          // Crear registros recurrentes
+          while (isBefore(currentDate, finalDate) || format(currentDate, 'yyyy-MM-dd') === format(finalDate, 'yyyy-MM-dd')) {
+            batchRecords.push({
+              id_entrenamiento: `${Date.now()}-${galloId}-${format(currentDate, 'yyyyMMdd')}`,
+              id_gallo: galloId,
+              tipo: formData.tipo,
+              duracion_min: formData.duracion_min ? parseFloat(formData.duracion_min) : null,
+              intensidad: formData.intensidad,
+              fecha: format(currentDate, 'yyyy-MM-dd'),
+            });
+
+            // Avanzar fecha según frecuencia
+            switch (formData.frecuencia) {
+              case 'diario':
+                currentDate = addDays(currentDate, 1);
+                break;
+              case 'semanal':
+                currentDate = addWeeks(currentDate, 1);
+                break;
+              case 'mensual':
+                currentDate = addMonths(currentDate, 1);
+                break;
+              case 'anual':
+                currentDate = addYears(currentDate, 1);
+                break;
+              default:
+                currentDate = addDays(currentDate, 1);
+            }
+          }
+        } else {
+          // Crear un solo registro normal
+          batchRecords.push({
+            id_entrenamiento: `${Date.now()}-${galloId}-ent`,
+            id_gallo: galloId,
+            tipo: formData.tipo,
+            duracion_min: formData.duracion_min ? parseFloat(formData.duracion_min) : null,
+            intensidad: formData.intensidad,
+            fecha: formData.fecha,
+          });
+        }
+      }
+      
+      updateData('Entrenamientos', [...entrenamientos, ...batchRecords]);
+      showNotification(`${batchRecords.length} registro(s) de entrenamiento ${formData.isRecurrente ? 'programados' : 'agregados'}.`);
+    }
+    
+    setFormData(initialFormData);
+    setShowAddForm(false);
+    setEditingEntrenamiento(null);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -226,10 +323,11 @@ const EntrenamientosList = ({ searchTerm }) => {
         <button
           className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${showAddForm ? 'bg-red-600 hover:bg-red-700' : 'bg-indigo-600 hover:bg-indigo-700'}`}
           onClick={() => {
-            setShowAddForm(!showAddForm);
-            if (!showAddForm) {
+            if (showAddForm) {
               setFormData(initialFormData);
+              setEditingEntrenamiento(null);
             }
+            setShowAddForm(!showAddForm);
           }}
         >
           {showAddForm ? <X className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
@@ -237,12 +335,13 @@ const EntrenamientosList = ({ searchTerm }) => {
         </button>
       </div>
       
-      {/* Formulario para agregar */}
+      {/* Formulario para agregar/editar */}
       {showAddForm && (
         <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Registrar Nuevo Entrenamiento</h2>
-          
-          <form onSubmit={handleAddEntrenamiento}>
+          <h2 className="text-lg font-medium text-gray-900 mb-4">
+            {editingEntrenamiento ? 'Editar Entrenamiento' : 'Registrar Nuevo Entrenamiento'}
+          </h2>
+          <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-3">
                 <label className="block text-sm font-medium text-gray-700">Gallos*</label>
@@ -298,13 +397,12 @@ const EntrenamientosList = ({ searchTerm }) => {
                   <option value="Fuerza">Fuerza</option>
                   <option value="Combate">Combate</option>
                   <option value="Estiramientos">Estiramientos</option>
-                  <option value="Otro">Otro</option>
                 </select>
               </div>
               
               <div>
                 <label htmlFor="duracion_min" className="block text-sm font-medium text-gray-700">
-                  Duración (minutos)
+                  Duración (min)
                 </label>
                 <input
                   type="number"
@@ -315,13 +413,12 @@ const EntrenamientosList = ({ searchTerm }) => {
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                   min="0"
                   step="1"
-                  placeholder="30"
                 />
               </div>
               
               <div>
                 <label htmlFor="intensidad" className="block text-sm font-medium text-gray-700">
-                  Intensidad
+                  Intensidad*
                 </label>
                 <select
                   name="intensidad"
@@ -337,59 +434,60 @@ const EntrenamientosList = ({ searchTerm }) => {
               </div>
             </div>
             
-            {/* Opciones de recurrencia */}
-            <div className="mt-6 border-t pt-4">
-              <div className="flex items-center mb-4">
-                <input
-                  type="checkbox"
-                  id="isRecurrente"
-                  name="isRecurrente"
-                  checked={formData.isRecurrente}
-                  onChange={handleInputChange}
-                  className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                />
-                <label htmlFor="isRecurrente" className="ml-2 block text-sm font-medium text-gray-700 flex items-center">
-                  <CalendarClock className="inline-block mr-1 h-4 w-4 text-indigo-500" />
-                  Entrenamiento recurrente
-                </label>
-              </div>
-             
-              {formData.isRecurrente && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6 border-l-2 border-indigo-100">
-                  <div>
-                    <label htmlFor="fechaFinal" className="block text-sm font-medium text-gray-700">
-                      Fecha Final*
-                    </label>
-                    <input
-                      type="date"
-                      name="fechaFinal"
-                      id="fechaFinal"
-                      value={formData.fechaFinal}
-                      onChange={handleInputChange}
-                      min={formData.fecha}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="frecuencia" className="block text-sm font-medium text-gray-700">
-                      Frecuencia*
-                    </label>
-                    <select
-                      name="frecuencia"
-                      id="frecuencia"
-                      value={formData.frecuencia}
-                      onChange={handleInputChange}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    >
-                      <option value="diario">Diario</option>
-                      <option value="semanal">Semanal</option>
-                      <option value="mensual">Mensual</option>
-                      <option value="anual">Anual</option>
-                    </select>
-                  </div>
+            {!editingEntrenamiento && (
+              <div className="mt-6 border-t pt-4">
+                <div className="flex items-center mb-4">
+                  <input
+                    type="checkbox"
+                    id="isRecurrente"
+                    name="isRecurrente"
+                    checked={formData.isRecurrente}
+                    onChange={handleInputChange}
+                    className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                  />
+                  <label htmlFor="isRecurrente" className="ml-2 block text-sm font-medium text-gray-700 flex items-center">
+                    <CalendarClock className="inline-block mr-1 h-4 w-4 text-indigo-500" />
+                    Entrenamiento recurrente
+                  </label>
                 </div>
-              )}
-            </div>
+               
+                {formData.isRecurrente && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6 border-l-2 border-indigo-100">
+                    <div>
+                      <label htmlFor="fechaFinal" className="block text-sm font-medium text-gray-700">
+                        Fecha Final*
+                      </label>
+                      <input
+                        type="date"
+                        name="fechaFinal"
+                        id="fechaFinal"
+                        value={formData.fechaFinal}
+                        onChange={handleInputChange}
+                        min={formData.fecha}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="frecuencia" className="block text-sm font-medium text-gray-700">
+                        Frecuencia*
+                      </label>
+                      <select
+                        name="frecuencia"
+                        id="frecuencia"
+                        value={formData.frecuencia}
+                        onChange={handleInputChange}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                      >
+                        <option value="diario">Diario</option>
+                        <option value="semanal">Semanal</option>
+                        <option value="mensual">Mensual</option>
+                        <option value="anual">Anual</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             
             <div className="mt-4 flex justify-end space-x-3">
               <button
@@ -403,9 +501,9 @@ const EntrenamientosList = ({ searchTerm }) => {
                 type="submit"
                 className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
-                {formData.isRecurrente 
+                {editingEntrenamiento ? 'Actualizar' : (formData.isRecurrente 
                   ? `Programar para ${formData.selectedGalloIds.length} Gallo(s)` 
-                  : `Guardar para ${formData.selectedGalloIds.length} Gallo(s)`}
+                  : `Guardar para ${formData.selectedGalloIds.length} Gallo(s)`)}
               </button>
             </div>
           </form>
@@ -468,12 +566,19 @@ const EntrenamientosList = ({ searchTerm }) => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
                         <button
+                          className="text-blue-600 hover:text-blue-900"
+                          onClick={() => handleEditClick(entrenamiento)}
+                          title="Editar"
+                        >
+                          <Edit2 size={18} />
+                        </button>
+                        <button
                           className="text-indigo-600 hover:text-indigo-900"
                           onClick={() => {
                             const gallo = gallos.find(g => g.id_gallo === entrenamiento.id_gallo);
                             if (gallo) {
-                              // Navegar a detalles del gallo (implementar lógica)
-                              console.log('Ver detalles del gallo:', gallo);
+                              setActiveTab('Gallo');
+                              onSelectGallo(gallo);
                             }
                           }}
                           title="Ver gallo"

@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useData } from '../contexts/DataContext';
-import { Utensils, Plus, Trash2, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { Utensils, Plus, Trash2, ChevronDown, ChevronUp, X, Edit2 } from 'lucide-react';
 
 const AlimentacionList = ({ searchTerm }) => {
   const { alimentacion = [], gallos, updateData, showNotification } = useData();
   const [filteredAlimentacion, setFilteredAlimentacion] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [sortConfig, setSortConfig] = useState({ key: 'fecha', direction: 'descending' });
+  const [editingAlimentacion, setEditingAlimentacion] = useState(null);
   const [formData, setFormData] = useState({
     selectedGalloIds: [],
     tipo_alimento: '',
@@ -151,6 +152,58 @@ const AlimentacionList = ({ searchTerm }) => {
     showNotification('Registro de alimentación eliminado');
   };
 
+  const handleEditClick = (item) => {
+    setEditingAlimentacion(item);
+    setFormData({
+      selectedGalloIds: [item.id_gallo],
+      tipo_alimento: item.tipo_alimento,
+      cantidad_g: item.cantidad_g.toString(),
+      fecha: item.fecha,
+      observaciones: item.observaciones || '',
+    });
+    setShowAddForm(true);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    if (editingAlimentacion) {
+      // Modo edición
+      const updatedAlimentacion = alimentacion.map(item =>
+        item.id_alimentacion === editingAlimentacion.id_alimentacion
+          ? {
+              ...item,
+              id_gallo: formData.selectedGalloIds[0],
+              tipo_alimento: formData.tipo_alimento,
+              cantidad_g: parseFloat(formData.cantidad_g),
+              fecha: formData.fecha,
+              observaciones: formData.observaciones,
+            }
+          : item
+      );
+      updateData('Alimentacion', updatedAlimentacion);
+      showNotification('Registro de alimentación actualizado correctamente');
+    } else {
+      // Modo creación - existing code
+      const newRecords = formData.selectedGalloIds.map((id) => ({
+        id_alimentacion: Date.now().toString() + id,
+        id_gallo: id,
+        tipo_alimento: formData.tipo_alimento,
+        cantidad_g: parseFloat(formData.cantidad_g),
+        fecha: formData.fecha,
+        observaciones: formData.observaciones,
+      }));
+
+      updateData('Alimentacion', [...alimentacion, ...newRecords]);
+      showNotification(`${newRecords.length} registros de alimentación agregados`);
+    }
+
+    setFormData({ selectedGalloIds: [], tipo_alimento: '', cantidad_g: '', fecha: '', observaciones: '' });
+    setShowAddForm(false);
+    setEditingAlimentacion(null);
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     // Intl.DateTimeFormat es más flexible para formatos locales
@@ -192,7 +245,13 @@ const AlimentacionList = ({ searchTerm }) => {
         </h1>
         <button
           className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${showAddForm ? 'bg-red-600 hover:bg-red-700' : 'bg-indigo-600 hover:bg-indigo-700'}`}
-          onClick={() => setShowAddForm(!showAddForm)}
+          onClick={() => {
+            if (showAddForm) {
+              setFormData({ selectedGalloIds: [], tipo_alimento: '', cantidad_g: '', fecha: '', observaciones: '' });
+              setEditingAlimentacion(null);
+            }
+            setShowAddForm(!showAddForm);
+          }}
         >
           {showAddForm ? <X className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
           {showAddForm ? 'Cancelar' : 'Registrar Alimento'}
@@ -201,8 +260,10 @@ const AlimentacionList = ({ searchTerm }) => {
 
       {showAddForm && (
         <div className="bg-white rounded-lg shadow-sm p-6 border border-indigo-200">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Nuevo Registro de Alimentación</h2>
-          <form onSubmit={handleAddAlimentacion}>
+          <h2 className="text-lg font-medium text-gray-900 mb-4">
+            {editingAlimentacion ? 'Editar Registro de Alimentación' : 'Nuevo Registro de Alimentación'}
+          </h2>
+          <form onSubmit={handleSubmit}>
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                <div className="md:col-span-3">
                  <label className="block text-sm font-medium text-gray-700">Gallos*</label>
@@ -272,7 +333,13 @@ const AlimentacionList = ({ searchTerm }) => {
                     <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate" title={item.observaciones}>{item.observaciones || '-'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                        <div className="flex space-x-2">
-                         {/* Podrías añadir un botón para editar si implementas esa funcionalidad */}
+                         <button 
+                          onClick={() => handleEditClick(item)} 
+                          className="text-blue-500 hover:text-blue-700 transition-colors duration-150" 
+                          title="Editar"
+                        >
+                          <Edit2 size={18} />
+                        </button>
                          <button onClick={() => handleDeleteAlimentacion(item.id_alimentacion)} className="text-red-500 hover:text-red-700 transition-colors duration-150" title="Eliminar">
                            <Trash2 size={18} />
                          </button>

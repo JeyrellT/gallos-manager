@@ -71,3 +71,22 @@
 .icon-hover:hover {
   @apply text-indigo-500;
 }
+
+/* Media queries para pantallas pequeñas */
+@media (max-width: 768px) {
+  .dashboard-card {
+    @apply p-4;
+  }
+
+  .btn-primary {
+    @apply px-3 py-2 text-sm;
+  }
+
+  .btn-secondary {
+    @apply px-3 py-2 text-sm;
+  }
+
+  .table-responsive {
+    @apply text-xs;
+  }
+}

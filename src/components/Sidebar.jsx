@@ -90,7 +90,7 @@ const Sidebar = ({ activeTab, setActiveTab, mobileMenuOpen, setMobileMenuOpen })
     <div
       className={`fixed inset-y-0 left-0 z-40 w-64 bg-gradient-to-b from-indigo-900 to-blue-800 text-white transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${
         mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-      } flex flex-col`} // Flex container for footer
+      } flex flex-col md:w-72`} // Ajuste de ancho para pantallas más grandes
     >
       {/* Encabezado del Sidebar */}
       <div className="flex items-center justify-between p-4 mb-4 flex-shrink-0">

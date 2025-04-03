@@ -7,7 +7,7 @@ import Papa from 'papaparse';
  * en diferentes formatos (JSON, CSV, XLSX)
  */
 class ExportImportUtils {
-  // Definir las entidades admitidas y sus datos de ejemplo para plantillas
+  // Plantillas completas para cada entidad
   ENTITY_TEMPLATES = {
     Gallo: [
       { 
@@ -18,14 +18,21 @@ class ExportImportUtils {
         estado: 'Activo', 
         fecha_nacimiento: '2023-01-01',
         sexo: 'Macho',
-        id_linea: '1'
+        altura: '25',
+        color: 'Negro',
+        descripcion: 'Descripción del gallo',
+        id_linea: '1',
+        notas: 'Notas adicionales'
       }
     ],
     Linea_Genetica: [
       {
         id_linea: '1',
         nombre_linea: 'Ejemplo Línea',
-        descripcion: 'Descripción de la línea genética de ejemplo'
+        descripcion: 'Descripción detallada de la línea genética',
+        origen: 'Origen de la línea',
+        caracteristicas: 'Características principales',
+        notas: 'Notas sobre la línea'
       }
     ],
     Peleas: [
@@ -36,7 +43,10 @@ class ExportImportUtils {
         resultado: 'Victoria',
         duracion_min: 12,
         peso_antes: 2500,
-        peso_despues: 2480
+        peso_despues: 2480,
+        observaciones: 'Detalles de la pelea',
+        lugar: 'Ubicación',
+        rival: 'Información del rival'
       }
     ],
     Cuidados_Medicos: [
@@ -45,7 +55,11 @@ class ExportImportUtils {
         id_gallo: '1',
         tipo: 'Vacuna',
         descripcion: 'Vacuna contra Newcastle',
-        fecha: '2023-03-10'
+        fecha: '2023-03-10',
+        medicamento: 'Nombre del medicamento',
+        dosis: 'Dosis aplicada',
+        proxima_fecha: '2023-06-10',
+        notas: 'Observaciones del tratamiento'
       }
     ],
     Entrenamientos: [
@@ -55,7 +69,10 @@ class ExportImportUtils {
         tipo: 'Carrera',
         duracion_min: 30,
         intensidad: 'Alta',
-        fecha: '2023-04-05'
+        fecha: '2023-04-05',
+        descripcion: 'Detalles del entrenamiento',
+        resultados: 'Resultados observados',
+        notas: 'Notas adicionales'
       }
     ],
     Alimentacion: [
@@ -64,7 +81,10 @@ class ExportImportUtils {
         id_gallo: '1',
         tipo_alimento: 'Grano',
         cantidad_g: 150,
-        fecha: '2023-04-01'
+        fecha: '2023-04-01',
+        suplementos: 'Suplementos adicionales',
+        hora: '08:00',
+        notas: 'Observaciones de la alimentación'
       }
     ],
     Higiene: [
@@ -73,7 +93,10 @@ class ExportImportUtils {
         id_gallo: '1',
         tipo: 'Limpieza',
         descripcion: 'Limpieza de plumas',
-        fecha: '2023-03-15'
+        fecha: '2023-03-15',
+        productos: 'Productos utilizados',
+        procedimiento: 'Descripción del procedimiento',
+        notas: 'Observaciones adicionales'
       }
     ],
     Control_Pesos: [
@@ -81,7 +104,10 @@ class ExportImportUtils {
         id_control: '1',
         id_gallo: '1',
         peso_g: 2500,
-        fecha: '2023-03-01'
+        fecha: '2023-03-01',
+        observaciones: 'Notas sobre el peso',
+        cambio_dieta: 'Ajustes en la dieta',
+        motivo: 'Razón del control'
       }
     ]
   };
@@ -120,22 +146,41 @@ class ExportImportUtils {
   entitiesToExcel(data) {
     const workbook = XLSX.utils.book_new();
     
+    // Crear hoja de instrucciones
+    const instructionsData = [
+      ['INSTRUCCIONES'],
+      [''],
+      ['Este archivo contiene los datos exportados de todas las entidades.'],
+      ['Puede usar este archivo como respaldo o para importar los datos en otra instancia.'],
+      [''],
+      ['Entidades incluidas:'],
+      ...Object.keys(data).map(entity => [`- ${entity}`])
+    ];
+    
+    const instructionsSheet = XLSX.utils.aoa_to_sheet(instructionsData);
+    XLSX.utils.book_append_sheet(workbook, instructionsSheet, 'Instrucciones');
+    
     // Convertir cada entidad a una hoja
     Object.entries(data).forEach(([entityName, entityData]) => {
       if (Array.isArray(entityData) && entityData.length > 0) {
-        // Crear hoja con los datos
         const worksheet = XLSX.utils.json_to_sheet(entityData);
-        XLSX.utils.book_append_sheet(workbook, worksheet, entityName);
-      } else {
-        // Crear hoja vacía con encabezados si no hay datos
-        const worksheet = XLSX.utils.aoa_to_sheet([['No hay datos']]);
+        
+        // Ajustar ancho de columnas
+        const columnsWidth = [];
+        const headers = Object.keys(entityData[0]);
+        headers.forEach(header => {
+          columnsWidth.push({ wch: Math.max(header.length, 15) });
+        });
+        worksheet['!cols'] = columnsWidth;
+        
         XLSX.utils.book_append_sheet(workbook, worksheet, entityName);
       }
     });
     
-    // Convertir a blob para descarga
     const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-    return new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    return new Blob([excelBuffer], { 
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+    });
   }
 
   /**
@@ -145,7 +190,7 @@ class ExportImportUtils {
   createMultiSheetExcelTemplate() {
     const workbook = XLSX.utils.book_new();
     
-    // Crear hoja de instrucciones
+    // Crear hoja de instrucciones detallada
     const instructionsData = [
       ['INSTRUCCIONES PARA IMPORTACIÓN DE DATOS'],
       [''],
@@ -153,11 +198,17 @@ class ExportImportUtils {
       ['2. Cada hoja debe mantener el nombre exacto de la entidad (por ejemplo, "Gallo", "Linea_Genetica", etc.)'],
       ['3. La primera fila de cada hoja contiene los nombres de las columnas que debe mantener.'],
       ['4. Los datos de ejemplo muestran el formato correcto para cada campo.'],
-      ['5. Los campos con (*) son obligatorios.'],
-      ['6. Respete las referencias entre entidades. Por ejemplo, un Gallo debe referenciar un id_linea existente.'],
+      ['5. Los campos con (*) son obligatorios:'],
+      ['   - Gallo: nombre, raza, id_linea'],
+      ['   - Linea_Genetica: nombre_linea'],
+      ['   - Demás entidades: id_gallo, fecha'],
+      ['6. Respete las referencias entre entidades:'],
+      ['   - Los gallos deben referenciar un id_linea existente'],
+      ['   - Las demás entidades deben referenciar un id_gallo existente'],
       ['7. Las fechas deben estar en formato YYYY-MM-DD (ej: 2023-01-31)'],
-      ['8. Puede eliminar los datos de ejemplo, pero mantenga siempre la fila de encabezados.'],
-      ['9. Puede eliminar hojas completas si no desea importar esa entidad.'],
+      ['8. Los campos numéricos (pesos, duraciones) deben ser números sin texto'],
+      ['9. Puede eliminar los datos de ejemplo, pero mantenga la fila de encabezados'],
+      ['10. No es necesario incluir todas las hojas, solo las que desea importar'],
       [''],
       ['ENTIDADES DISPONIBLES:'],
       ['- Gallo: Información básica de cada gallo'],
@@ -171,48 +222,49 @@ class ExportImportUtils {
     ];
     
     const instructionsSheet = XLSX.utils.aoa_to_sheet(instructionsData);
-    
-    // Estilo para la hoja de instrucciones (ancho de columnas)
     instructionsSheet['!cols'] = [{ wch: 100 }];
-    
     XLSX.utils.book_append_sheet(workbook, instructionsSheet, 'Instrucciones');
     
-    // Crear hojas para cada entidad con datos de muestra
+    // Crear hojas para cada entidad con datos de ejemplo
     Object.entries(this.ENTITY_TEMPLATES).forEach(([entityName, templateData]) => {
       if (Array.isArray(templateData) && templateData.length > 0) {
-        // Crear dos filas de datos de ejemplo
+        // Crear dos filas de ejemplo con datos diferentes
         const secondRow = { ...templateData[0] };
-        // Modificar algunos valores para el segundo ejemplo
-        if (entityName === 'Gallo') {
-          secondRow.id_gallo = '2';
-          secondRow.nombre = 'Otro Gallo';
-        } else if (entityName === 'Linea_Genetica') {
-          secondRow.id_linea = '2';
-          secondRow.nombre_linea = 'Otra Línea';
+        
+        // Modificar IDs y algunos valores para el segundo ejemplo
+        Object.keys(secondRow).forEach(key => {
+          if (key.startsWith('id_')) {
+            secondRow[key] = String(parseInt(secondRow[key]) + 1);
+          }
+        });
+        
+        if (secondRow.nombre) secondRow.nombre += ' 2';
+        if (secondRow.nombre_linea) secondRow.nombre_linea += ' 2';
+        if (secondRow.fecha) {
+          const date = new Date(secondRow.fecha);
+          date.setDate(date.getDate() + 1);
+          secondRow.fecha = date.toISOString().split('T')[0];
         }
         
         const entityData = [templateData[0], secondRow];
-        
-        // Crear hoja con datos y encabezados
         const worksheet = XLSX.utils.json_to_sheet(entityData);
         
-        // Agregar la hoja al libro
-        XLSX.utils.book_append_sheet(workbook, worksheet, entityName);
-        
-        // Establecer ancho de columnas basado en contenido
+        // Ajustar ancho de columnas
         const columnsWidth = [];
         const headers = Object.keys(entityData[0]);
         headers.forEach(header => {
-          // Calcular ancho basado en la longitud del encabezado
           columnsWidth.push({ wch: Math.max(header.length, 15) });
         });
         worksheet['!cols'] = columnsWidth;
+        
+        XLSX.utils.book_append_sheet(workbook, worksheet, entityName);
       }
     });
     
-    // Convertir a blob para descarga
     const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-    return new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    return new Blob([excelBuffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
   }
 
   /**
@@ -238,27 +290,16 @@ class ExportImportUtils {
         try {
           const data = e.target.result;
           const workbook = XLSX.read(data, { type: 'array' });
-          
-          // Resultado a devolver
           const result = {};
           
-          // Procesar cada hoja - ignorar hoja de instrucciones
           workbook.SheetNames.forEach(sheetName => {
-            // Ignorar hoja de instrucciones si existe
-            if (sheetName.toLowerCase() === 'instrucciones') {
-              return;
-            }
+            if (sheetName.toLowerCase() === 'instrucciones') return;
             
-            // Intentar normalizar el nombre de la entidad
             const normalizedEntityName = this.normalizeEntityName(sheetName);
-            
-            // Convertir hoja a JSON
             const worksheet = workbook.Sheets[sheetName];
             const sheetData = XLSX.utils.sheet_to_json(worksheet);
             
-            // Solo guardar si hay datos
             if (sheetData && sheetData.length > 0) {
-              // Usar el nombre normalizado de la entidad como clave
               result[normalizedEntityName] = sheetData;
             }
           });
@@ -286,8 +327,6 @@ class ExportImportUtils {
     if (!Array.isArray(entityData) || entityData.length === 0) {
       return 'No hay datos';
     }
-    
-    // Usar PapaParse para convertir a CSV
     return Papa.unparse(entityData);
   }
 
@@ -297,7 +336,7 @@ class ExportImportUtils {
    * @param {string} entityName - Nombre de la entidad
    * @returns {Promise<Object>} - Objeto con los datos importados
    */
-  parseCSVFile(file, entityName) {
+  async parseCSVFile(file, entityName) {
     return new Promise((resolve, reject) => {
       Papa.parse(file, {
         header: true,
@@ -309,8 +348,9 @@ class ExportImportUtils {
             return;
           }
           
-          const importedData = {};
-          importedData[entityName] = results.data;
+          const importedData = {
+            [entityName]: results.data
+          };
           resolve(importedData);
         },
         error: (error) => {
@@ -333,13 +373,12 @@ class ExportImportUtils {
       'Peleas', 'Control_Pesos'
     ];
     
-    // Si no hay datos, reportar error
     if (!data || Object.keys(data).length === 0) {
       errors.push('No se encontraron datos para importar');
       return { isValid: false, errors };
     }
     
-    // Verificar que los nombres de entidades sean válidos
+    // Verificar entidades válidas
     Object.keys(data).forEach(entityName => {
       const normalizedName = this.normalizeEntityName(entityName);
       if (!requiredEntities.includes(normalizedName)) {
@@ -347,19 +386,34 @@ class ExportImportUtils {
       }
     });
     
-    // Verificar que todos los datos sean arreglos
+    // Verificar estructura de datos
     Object.entries(data).forEach(([entity, entityData]) => {
       if (!Array.isArray(entityData)) {
         errors.push(`${entity}: Los datos no son un arreglo válido`);
       } else if (entityData.length === 0) {
-        // No es un error, pero puede ser útil saberlo
         console.log(`${entity}: No hay datos para importar`);
+      } else {
+        // Validar campos requeridos según la entidad
+        entityData.forEach((item, index) => {
+          switch(entity) {
+            case 'Gallo':
+              if (!item.nombre) errors.push(`Gallo [fila ${index+2}]: Falta el nombre`);
+              if (!item.raza) errors.push(`Gallo [fila ${index+2}]: Falta la raza`);
+              if (!item.id_linea) errors.push(`Gallo [fila ${index+2}]: Falta el ID de línea genética`);
+              break;
+            case 'Linea_Genetica':
+              if (!item.nombre_linea) errors.push(`Línea Genética [fila ${index+2}]: Falta el nombre`);
+              break;
+            default:
+              if (!item.id_gallo) errors.push(`${entity} [fila ${index+2}]: Falta el ID del gallo`);
+              if (!item.fecha) errors.push(`${entity} [fila ${index+2}]: Falta la fecha`);
+          }
+        });
       }
     });
     
-    // Verificar las relaciones entre entidades (IDs)
+    // Verificar referencias entre entidades
     if (data.Gallo && data.Linea_Genetica) {
-      // Verificar que todas las líneas genéticas referenciadas existan
       const lineaIds = data.Linea_Genetica.map(l => l.id_linea?.toString());
       
       data.Gallo.forEach((gallo, index) => {
@@ -369,63 +423,19 @@ class ExportImportUtils {
       });
     }
     
-    // Verificar que todas las referencias a gallos existan
     if (data.Gallo) {
       const galloIds = data.Gallo.map(g => g.id_gallo?.toString());
       
-      // Verificar referencias en cuidados médicos
-      if (data.Cuidados_Medicos) {
-        data.Cuidados_Medicos.forEach((cuidado, index) => {
-          if (cuidado.id_gallo && !galloIds.includes(cuidado.id_gallo.toString())) {
-            errors.push(`Cuidado médico [fila ${index+2}]: Referencia a gallo inexistente (${cuidado.id_gallo})`);
-          }
-        });
-      }
-      
-      // Verificar referencias en entrenamientos
-      if (data.Entrenamientos) {
-        data.Entrenamientos.forEach((entrenamiento, index) => {
-          if (entrenamiento.id_gallo && !galloIds.includes(entrenamiento.id_gallo.toString())) {
-            errors.push(`Entrenamiento [fila ${index+2}]: Referencia a gallo inexistente (${entrenamiento.id_gallo})`);
-          }
-        });
-      }
-      
-      // Verificar referencias en alimentación
-      if (data.Alimentacion) {
-        data.Alimentacion.forEach((alimento, index) => {
-          if (alimento.id_gallo && !galloIds.includes(alimento.id_gallo.toString())) {
-            errors.push(`Alimentación [fila ${index+2}]: Referencia a gallo inexistente (${alimento.id_gallo})`);
-          }
-        });
-      }
-      
-      // Verificar referencias en higiene
-      if (data.Higiene) {
-        data.Higiene.forEach((higiene, index) => {
-          if (higiene.id_gallo && !galloIds.includes(higiene.id_gallo.toString())) {
-            errors.push(`Higiene [fila ${index+2}]: Referencia a gallo inexistente (${higiene.id_gallo})`);
-          }
-        });
-      }
-      
-      // Verificar referencias en control de pesos
-      if (data.Control_Pesos) {
-        data.Control_Pesos.forEach((control, index) => {
-          if (control.id_gallo && !galloIds.includes(control.id_gallo.toString())) {
-            errors.push(`Control de peso [fila ${index+2}]: Referencia a gallo inexistente (${control.id_gallo})`);
-          }
-        });
-      }
-      
-      // Verificar referencias en peleas
-      if (data.Peleas) {
-        data.Peleas.forEach((pelea, index) => {
-          if (pelea.id_gallo && !galloIds.includes(pelea.id_gallo.toString())) {
-            errors.push(`Pelea [fila ${index+2}]: Referencia a gallo inexistente (${pelea.id_gallo})`);
-          }
-        });
-      }
+      // Verificar referencias en todas las entidades relacionadas
+      Object.entries(data).forEach(([entity, entityData]) => {
+        if (entity !== 'Gallo' && entity !== 'Linea_Genetica') {
+          entityData.forEach((item, index) => {
+            if (item.id_gallo && !galloIds.includes(item.id_gallo.toString())) {
+              errors.push(`${entity} [fila ${index+2}]: Referencia a gallo inexistente (${item.id_gallo})`);
+            }
+          });
+        }
+      });
     }
     
     return {

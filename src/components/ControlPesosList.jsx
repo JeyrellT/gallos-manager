@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
-import { Scale, Plus, Trash2, ChevronDown, ChevronUp, TrendingUp, TrendingDown, Minus, X } from 'lucide-react';
+import { Scale, Plus, Trash2, ChevronDown, ChevronUp, TrendingUp, TrendingDown, Minus, X, Edit2 } from 'lucide-react';
 
 const ControlPesosList = ({ searchTerm }) => {
   const { controlPesos = [], gallos, updateData, showNotification } = useData();
   const [filteredPesos, setFilteredPesos] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [sortConfig, setSortConfig] = useState({ key: 'fecha', direction: 'descending' });
-   const [formData, setFormData] = useState({
+  const [editingPeso, setEditingPeso] = useState(null);
+  const [formData, setFormData] = useState({
     id_gallo: '',
     peso_g: '',
     fecha: '',
-    notas: '' // Campo adicional
+    notas: ''
   });
 
   // --- Lógica de Ordenamiento y Cálculo de Diferencia ---
@@ -113,32 +114,73 @@ const ControlPesosList = ({ searchTerm }) => {
     return true;
   };
 
-  const handleAddPeso = (e) => {
+  const handleEditClick = (item) => {
+    setEditingPeso(item);
+    setFormData({
+      id_gallo: item.id_gallo,
+      peso_g: item.peso_g.toString(),
+      fecha: item.fecha,
+      notas: item.notas || ''
+    });
+    setShowAddForm(true);
+  };
+
+  const handleSubmit = (e) => {
     e.preventDefault();
     if (!validateForm()) return;
 
-    const newId = Date.now().toString();
-    const newRecord = {
-      id_control: newId,
-      ...formData,
-      peso_g: parseFloat(formData.peso_g)
-    };
+    const peso_g = parseFloat(formData.peso_g);
 
-    const updatedPesos = [...controlPesos, newRecord];
-    updateData('Control_Pesos', updatedPesos);
+    if (editingPeso) {
+      // Modo edición
+      const updatedPesos = controlPesos.map(peso =>
+        peso.id_control === editingPeso.id_control
+          ? { ...peso, ...formData, peso_g }
+          : peso
+      );
 
-    // Actualizar peso_actual en el gallo correspondiente
-    const updatedGallos = gallos.map(gallo =>
-      gallo.id_gallo === formData.id_gallo
-        ? { ...gallo, peso_actual: newRecord.peso_g }
-        : gallo
-    );
-    updateData('Gallo', updatedGallos);
+      updateData('Control_Pesos', updatedPesos);
 
+      // Actualizar peso_actual en el gallo si es el registro más reciente
+      const galloRegistros = updatedPesos
+        .filter(p => p.id_gallo === formData.id_gallo)
+        .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+      if (galloRegistros[0]?.id_control === editingPeso.id_control) {
+        const updatedGallos = gallos.map(gallo =>
+          gallo.id_gallo === formData.id_gallo
+            ? { ...gallo, peso_actual: peso_g }
+            : gallo
+        );
+        updateData('Gallo', updatedGallos);
+      }
+
+      showNotification('Registro de peso actualizado correctamente');
+    } else {
+      // Modo creación
+      const newRecord = {
+        id_control: Date.now().toString(),
+        ...formData,
+        peso_g
+      };
+
+      const updatedPesos = [...controlPesos, newRecord];
+      updateData('Control_Pesos', updatedPesos);
+
+      // Actualizar peso_actual en el gallo
+      const updatedGallos = gallos.map(gallo =>
+        gallo.id_gallo === formData.id_gallo
+          ? { ...gallo, peso_actual: peso_g }
+          : gallo
+      );
+      updateData('Gallo', updatedGallos);
+
+      showNotification('Registro de peso agregado');
+    }
 
     setFormData({ id_gallo: '', peso_g: '', fecha: '', notas: '' });
     setShowAddForm(false);
-    showNotification('Registro de peso agregado');
+    setEditingPeso(null);
   };
 
   const handleDeletePeso = (id) => {
@@ -196,7 +238,13 @@ const ControlPesosList = ({ searchTerm }) => {
         </h1>
         <button
            className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${showAddForm ? 'bg-red-600 hover:bg-red-700' : 'bg-indigo-600 hover:bg-indigo-700'}`}
-           onClick={() => setShowAddForm(!showAddForm)}
+           onClick={() => {
+             if (showAddForm) {
+               setFormData({ id_gallo: '', peso_g: '', fecha: '', notas: '' });
+               setEditingPeso(null);
+             }
+             setShowAddForm(!showAddForm);
+           }}
         >
            {showAddForm ? <X className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
            {showAddForm ? 'Cancelar' : 'Registrar Peso'}
@@ -205,8 +253,10 @@ const ControlPesosList = ({ searchTerm }) => {
 
       {showAddForm && (
         <div className="bg-white rounded-lg shadow-sm p-6 border border-indigo-200">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Nuevo Registro de Peso</h2>
-          <form onSubmit={handleAddPeso}>
+          <h2 className="text-lg font-medium text-gray-900 mb-4">
+            {editingPeso ? 'Editar Registro de Peso' : 'Nuevo Registro de Peso'}
+          </h2>
+          <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                <div>
                  <label htmlFor="id_gallo" className="block text-sm font-medium text-gray-700">Gallo*</label>
@@ -227,19 +277,20 @@ const ControlPesosList = ({ searchTerm }) => {
                </div>
                <div className="md:col-span-3">
                   <label htmlFor="notas" className="block text-sm font-medium text-gray-700">Notas</label>
-                 <textarea name="notas" id="notas" rows="2" value={formData.notas} onChange={handleInputChange} placeholder="Condición, motivo del pesaje, etc." className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></textarea>
+                  <textarea name="notas" id="notas" rows="2" value={formData.notas} onChange={handleInputChange} placeholder="Condición, motivo del pesaje, etc." className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></textarea>
                </div>
             </div>
             <div className="mt-6 flex justify-end space-x-3">
                <button type="button" onClick={() => setShowAddForm(false)} className="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">Cerrar</button>
-               <button type="submit" className="px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">Guardar Peso</button>
+               <button type="submit" className="px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+                 {editingPeso ? 'Actualizar Peso' : 'Guardar Peso'}
+               </button>
             </div>
           </form>
         </div>
       )}
 
-
-       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
          {controlPesos.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
@@ -263,6 +314,13 @@ const ControlPesosList = ({ searchTerm }) => {
                     <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate" title={item.notas}>{item.notas || '-'}</td>
                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                        <div className="flex space-x-2">
+                         <button 
+                           onClick={() => handleEditClick(item)} 
+                           className="text-blue-500 hover:text-blue-700 transition-colors duration-150" 
+                           title="Editar"
+                         >
+                           <Edit2 size={18} />
+                         </button>
                          <button onClick={() => handleDeletePeso(item.id_control)} className="text-red-500 hover:text-red-700 transition-colors duration-150" title="Eliminar">
                            <Trash2 size={18} />
                          </button>

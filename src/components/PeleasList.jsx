@@ -1,12 +1,13 @@
 // src/components/PeleasList.jsx
 import React, { useState, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
-import { Award, Plus, Trash2, Eye } from 'lucide-react';
+import { Award, Plus, Trash2, Eye, X, Edit2 } from 'lucide-react';
 
-const PeleasList = ({ searchTerm }) => {
+const PeleasList = ({ searchTerm, setActiveTab, onSelectGallo }) => {
   const { peleas, gallos, updateData, showNotification } = useData();
   const [filteredPeleas, setFilteredPeleas] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingPelea, setEditingPelea] = useState(null);
   const [formData, setFormData] = useState({
     id_gallo: '',
     fecha: '',
@@ -164,6 +165,93 @@ const PeleasList = ({ searchTerm }) => {
     return new Date(dateString).toLocaleDateString('es-ES', options);
   };
 
+  const handleEditClick = (pelea) => {
+    setEditingPelea(pelea);
+    setFormData({
+      id_gallo: pelea.id_gallo,
+      fecha: pelea.fecha,
+      resultado: pelea.resultado,
+      duracion_min: pelea.duracion_min?.toString() || '',
+      peso_antes: pelea.peso_antes?.toString() || '',
+      peso_despues: pelea.peso_despues?.toString() || '',
+      observaciones: pelea.observaciones || ''
+    });
+    setShowAddForm(true);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+
+    const numericalFields = {
+      duracion_min: formData.duracion_min ? parseFloat(formData.duracion_min) : null,
+      peso_antes: formData.peso_antes ? parseFloat(formData.peso_antes) : null,
+      peso_despues: formData.peso_despues ? parseFloat(formData.peso_despues) : null
+    };
+    
+    if (editingPelea) {
+      // Modo edición
+      const updatedPeleas = peleas.map(pelea =>
+        pelea.id_pelea === editingPelea.id_pelea
+          ? { 
+              ...pelea, 
+              ...formData,
+              ...numericalFields
+            }
+          : pelea
+      );
+      
+      updateData('Peleas', updatedPeleas);
+
+      // Actualizar peso del gallo si se cambió el peso después
+      if (formData.peso_despues) {
+        const updatedGallos = gallos.map(gallo => 
+          gallo.id_gallo === formData.id_gallo 
+            ? { ...gallo, peso_actual: parseFloat(formData.peso_despues) } 
+            : gallo
+        );
+        updateData('Gallo', updatedGallos);
+      }
+      
+      showNotification('Pelea actualizada correctamente');
+    } else {
+      // Modo creación
+      const newPelea = {
+        id_pelea: Date.now().toString(),
+        ...formData,
+        ...numericalFields
+      };
+      
+      updateData('Peleas', [...peleas, newPelea]);
+      
+      // Actualizar peso del gallo si se proporcionó el peso después
+      if (formData.peso_despues) {
+        const updatedGallos = gallos.map(gallo => 
+          gallo.id_gallo === formData.id_gallo 
+            ? { ...gallo, peso_actual: parseFloat(formData.peso_despues) } 
+            : gallo
+        );
+        updateData('Gallo', updatedGallos);
+      }
+      
+      showNotification('Pelea registrada correctamente');
+    }
+    
+    // Resetear formulario
+    setFormData({
+      id_gallo: '',
+      fecha: '',
+      resultado: 'Victoria',
+      duracion_min: '',
+      peso_antes: '',
+      peso_despues: '',
+      observaciones: ''
+    });
+    setShowAddForm(false);
+    setEditingPelea(null);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -172,19 +260,35 @@ const PeleasList = ({ searchTerm }) => {
           Peleas
         </h1>
         <button
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          onClick={() => setShowAddForm(!showAddForm)}
+          className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${showAddForm ? 'bg-red-600 hover:bg-red-700' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+          onClick={() => {
+            if (showAddForm) {
+              setFormData({
+                id_gallo: '',
+                fecha: '',
+                resultado: 'Victoria',
+                duracion_min: '',
+                peso_antes: '',
+                peso_despues: '',
+                observaciones: ''
+              });
+              setEditingPelea(null);
+            }
+            setShowAddForm(!showAddForm);
+          }}
         >
-          <Plus className="mr-2 h-4 w-4" /> Registrar Pelea
+          {showAddForm ? <X className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
+          {showAddForm ? 'Cancelar' : 'Registrar Pelea'}
         </button>
       </div>
       
-      {/* Formulario para agregar */}
+      {/* Formulario para agregar/editar */}
       {showAddForm && (
         <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Registrar Nueva Pelea</h2>
-          
-          <form onSubmit={handleAddPelea}>
+          <h2 className="text-lg font-medium text-gray-900 mb-4">
+            {editingPelea ? 'Editar Pelea' : 'Registrar Nueva Pelea'}
+          </h2>
+          <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="id_gallo" className="block text-sm font-medium text-gray-700">
@@ -313,7 +417,7 @@ const PeleasList = ({ searchTerm }) => {
                 type="submit"
                 className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
-                Guardar
+                {editingPelea ? 'Actualizar' : 'Guardar'}
               </button>
             </div>
           </form>
@@ -382,12 +486,19 @@ const PeleasList = ({ searchTerm }) => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
                         <button
+                          className="text-blue-600 hover:text-blue-900"
+                          onClick={() => handleEditClick(pelea)}
+                          title="Editar"
+                        >
+                          <Edit2 size={18} />
+                        </button>
+                        <button
                           className="text-indigo-600 hover:text-indigo-900"
                           onClick={() => {
                             const gallo = gallos.find(g => g.id_gallo === pelea.id_gallo);
                             if (gallo) {
-                              // Navegar a detalles del gallo (implementar lógica)
-                              console.log('Ver detalles del gallo:', gallo);
+                              setActiveTab('Gallo');
+                              onSelectGallo(gallo);
                             }
                           }}
                           title="Ver gallo"
