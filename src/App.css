@@ -1,0 +1,73 @@
+/* src/App.css */
+/* Este archivo se mantiene mínimo ya que usamos Tailwind CSS para los estilos */
+
+/* Clases para animaciones específicas de la aplicación */
+.fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Clases para hover en tablas */
+.hover-row:hover {
+  @apply bg-gray-50;
+}
+
+/* Clases para tarjetas en el dashboard */
+.dashboard-card {
+  @apply bg-white rounded-lg shadow-sm p-6 transition-all duration-300 ease-in-out;
+}
+
+.dashboard-card:hover {
+  @apply shadow-md transform -translate-y-1;
+}
+
+/* Clases para botones de acción */
+.btn-primary {
+  @apply inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500;
+}
+
+.btn-secondary {
+  @apply inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500;
+}
+
+.btn-danger {
+  @apply inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500;
+}
+
+/* Clases para badges y etiquetas */
+.badge {
+  @apply px-2 inline-flex text-xs leading-5 font-semibold rounded-full;
+}
+
+.badge-success {
+  @apply bg-green-100 text-green-800;
+}
+
+.badge-warning {
+  @apply bg-yellow-100 text-yellow-800;
+}
+
+.badge-danger {
+  @apply bg-red-100 text-red-800;
+}
+
+.badge-info {
+  @apply bg-blue-100 text-blue-800;
+}
+
+/* Clases para efectos hover en iconos */
+.icon-hover {
+  @apply transition-colors duration-200;
+}
+
+.icon-hover:hover {
+  @apply text-indigo-500;
+}

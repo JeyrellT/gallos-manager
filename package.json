@@ -1,0 +1,60 @@
+{
+    "name": "gallos-manager",
+    "version": "1.0.0",
+    "private": true,
+    "homepage": "https://TU_USUARIO.github.io/gallos-manager",
+    "dependencies": {
+        "@nivo/calendar": "^0.88.0",
+        "@nivo/core": "^0.88.0",
+        "@testing-library/jest-dom": "^5.16.5",
+        "@testing-library/react": "^13.4.0",
+        "@testing-library/user-event": "^13.5.0",
+        "chart.js": "^4.4.8",
+        "chartjs-adapter-date-fns": "^3.0.0",
+        "date-fns": "^4.1.0",
+        "framer-motion": "^12.6.3",
+        "lucide-react": "^0.263.1",
+        "octokit": "^2.1.0",
+        "papaparse": "^5.5.2",
+        "react": "^18.2.0",
+        "react-chartjs-2": "^5.3.0",
+        "react-dom": "^18.2.0",
+        "react-router-dom": "^7.4.1",
+        "react-scripts": "5.0.1",
+        "web-vitals": "^2.1.4",
+        "xlsx": "^0.18.5"
+    },
+    "scripts": {
+        "start": "react-scripts start",
+        "build": "react-scripts build",
+        "test": "react-scripts test",
+        "eject": "react-scripts eject",
+        "predeploy": "npm run build",
+        "deploy": "gh-pages -d build"
+    },
+    "eslintConfig": {
+        "extends": [
+            "react-app",
+            "react-app/jest"
+        ]
+    },
+    "browserslist": {
+        "production": [
+            ">0.2%",
+            "not dead",
+            "not op_mini all"
+        ],
+        "development": [
+            "last 1 chrome version",
+            "last 1 firefox version",
+            "last 1 safari version"
+        ]
+    },
+    "devDependencies": {
+        "@tailwindcss/forms": "^0.5.3",
+        "autoprefixer": "^10.4.21",
+        "gh-pages": "^5.0.0",
+        "postcss": "^8.5.3",
+        "tailwindcss": "^3.4.17"
+    }
+}
