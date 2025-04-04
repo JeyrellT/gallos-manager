@@ -1,0 +1,60 @@
+name: Deploy React App to GitHub Pages
+
+# Ejecutar este workflow cada vez que se haga push a la rama main
+on:
+  push:
+    branches:
+      - main
+
+# Permisos necesarios para que la acción pueda escribir en el repositorio
+# y crear/actualizar la rama gh-pages para el despliegue.
+permissions:
+  contents: write
+
+jobs:
+  # Nombre del trabajo: construir y desplegar
+  build-and-deploy:
+    # Usar la última versión estable de Ubuntu como ejecutor
+    runs-on: ubuntu-latest
+
+    steps: # Secuencia de pasos a ejecutar
+
+      # Paso 1: Descargar el código de tu repositorio al ejecutor
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Paso 2: Configurar el entorno de Node.js
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          # Especifica la versión de Node.js que necesita tu proyecto
+          node-version: 20.x
+          # Usar caché para las dependencias de npm para acelerar futuras ejecuciones
+          cache: 'npm'
+
+      # Paso 3: Instalar las dependencias del proyecto
+      - name: Install Dependencies
+        # 'npm ci' es generalmente preferido en CI para instalaciones limpias y rápidas
+        run: npm ci
+
+      # Paso 4: Ejecutar el comando de compilación (build)
+      - name: Build Project
+        # ¡VERIFICA ESTO! Asegúrate que 'build' sea el nombre correcto de tu script en package.json
+        run: npm run build
+        # Puedes añadir variables de entorno si tu build las necesita:
+        # env:
+        #   CI: true
+
+      # Paso 5: Desplegar la carpeta 'build' a GitHub Pages
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          # Token proporcionado automáticamente por GitHub Actions
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # Directorio que contiene los archivos compilados a desplegar
+          publish_dir: ./build # <-- Corregido para usar tu carpeta 'build'
+          # Opcional: puedes descomentar y personalizar estas líneas si lo deseas
+          # publish_branch: gh-pages # Rama donde se desplegará (por defecto es gh-pages)
+          # user_name: 'github-actions[bot]'
+          # user_email: 'github-actions[bot]@users.noreply.github.com'
+          # commit_message: 'Deploy React app to Pages'
