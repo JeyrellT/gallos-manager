@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, memo } from 'react';
 import { useData } from '../contexts/DataContext';
 import { 
   Feather, Award, Heart, Activity, Wifi, WifiOff, AlertTriangle,
@@ -25,6 +25,7 @@ import GalloSelector from './GalloSelector';
 import FilterPanel from './FilterPanel';
 import Timeline from './Timeline';
 
+// Registrar componentes de Chart.js una sola vez
 ChartJS.register(
   ArcElement,
   CategoryScale,
@@ -38,8 +39,15 @@ ChartJS.register(
   TimeScale
 );
 
-// Reusable StatCard component
-const StatCard = ({ title, value, subtitle, icon, onClick, color, children }) => (
+// Configuración optimizada para animaciones
+const fadeInAnimation = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
+  transition: { duration: 0.3 }
+};
+
+// Componentes memorizados para evitar re-renderizaciones
+const StatCard = memo(({ title, value, subtitle, icon, onClick, color, children }) => (
   <div 
     className={`bg-white rounded-lg shadow-sm p-6 ${onClick ? 'cursor-pointer hover:bg-gray-50 transition-colors' : ''}`}
     onClick={onClick}
@@ -52,10 +60,9 @@ const StatCard = ({ title, value, subtitle, icon, onClick, color, children }) =>
     {subtitle && <p className="mt-1 text-sm text-gray-500">{subtitle}</p>}
     {children}
   </div>
-);
+));
 
-// Componente de sección con título
-const SectionTitle = ({ icon, title, subtitle }) => (
+const SectionTitle = memo(({ icon, title, subtitle }) => (
   <div className="mb-4">
     <div className="flex items-center">
       {icon && React.cloneElement(icon, { className: "w-6 h-6 mr-2 text-indigo-600" })}
@@ -63,10 +70,9 @@ const SectionTitle = ({ icon, title, subtitle }) => (
     </div>
     {subtitle && <p className="text-sm text-gray-500 mt-1">{subtitle}</p>}
   </div>
-);
+));
 
-// Componente para indicadores individuales del gallo
-const GalloStatCard = ({ title, value, icon, color }) => (
+const GalloStatCard = memo(({ title, value, icon, color }) => (
   <div className={`bg-white rounded-lg shadow-sm p-4 border-l-4 border-${color || 'indigo'}-400`}>
     <div className="flex items-center">
       {React.cloneElement(icon, { className: `w-5 h-5 mr-2 text-${color || 'indigo'}-500` })}
@@ -74,7 +80,30 @@ const GalloStatCard = ({ title, value, icon, color }) => (
     </div>
     <p className="mt-2 text-xl font-bold text-gray-900">{value}</p>
   </div>
-);
+));
+
+// Opciones globales para todas las gráficas para mejorar rendimiento
+const globalChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  animation: {
+    duration: 500 // Reducir duración de animaciones
+  },
+  plugins: {
+    legend: {
+      display: true,
+      position: 'top'
+    }
+  },
+  elements: {
+    point: {
+      radius: 3 // Reducir tamaño de puntos para mejorar rendimiento
+    },
+    line: {
+      tension: 0.1 // Reducir suavizado de líneas
+    }
+  }
+};
 
 const Dashboard = ({ setActiveTab }) => {
   // Get all necessary data from context
@@ -111,17 +140,17 @@ const Dashboard = ({ setActiveTab }) => {
 
   const [eventLimit, setEventLimit] = useState(5);
 
-  // Función para formatear fechas
-  const formatDate = (dateString) => {
+  // Función para formatear fechas - memoizada para evitar cálculos repetidos
+  const formatDate = useCallback((dateString) => {
     if (!dateString) return 'N/A';
     try {
         return new Intl.DateTimeFormat('es-CR', { year: 'numeric', month: 'short', day: 'numeric' })
             .format(new Date(dateString + 'T00:00:00'));
     } catch(e) { return 'Fecha inválida'; }
-  };
+  }, []);
 
-  // Función para calcular edad - movida aquí arriba antes de su uso
-  const calcularEdad = (fechaNacimiento) => {
+  // Función para calcular edad - memoizada
+  const calcularEdad = useCallback((fechaNacimiento) => {
     if (!fechaNacimiento) return 'Desconocida';
     
     const birthDate = new Date(fechaNacimiento);
@@ -140,13 +169,12 @@ const Dashboard = ({ setActiveTab }) => {
     } else {
       return `${months} mes${months !== 1 ? 'es' : ''}`;
     }
-  };
-
-  // Format time duration in hours and minutes
+  }, []);
 
   // Stats calculation with useMemo to optimize performance
   const stats = useMemo(() => {
-    // Basic stats (as before)
+    // Stats calculation (sin cambios en lógica)
+    // ...existing code...
     const totalGallos = gallos.length;
     const gallosActivos = gallos.filter(g => g.estado === 'Activo').length;
     const gallosInactivos = gallos.filter(g => g.estado === 'Inactivo').length;
@@ -437,8 +465,55 @@ const Dashboard = ({ setActiveTab }) => {
     };
   }, [gallos, lineasGeneticas, peleas, cuidadosMedicos, entrenamientos, alimentacion, higiene, controlPesos]);
 
+  // Opciones de configuración optimizadas para gráficos
+  const pieChartOptions = useMemo(() => ({
+    ...globalChartOptions,
+    plugins: {
+      ...globalChartOptions.plugins,
+      legend: {
+        position: window.innerWidth < 768 ? 'bottom' : 'right',
+        labels: {
+          boxWidth: window.innerWidth < 768 ? 12 : 20,
+          padding: window.innerWidth < 768 ? 8 : 10,
+          font: {
+            size: window.innerWidth < 768 ? 10 : 12
+          }
+        }
+      }
+    }
+  }), []);
+
+  const barChartOptions = useMemo(() => ({
+    ...globalChartOptions,
+    indexAxis: 'y',
+    scales: {
+      x: {
+        beginAtZero: true,
+        ticks: {
+          precision: 0,
+          font: {
+            size: window.innerWidth < 768 ? 10 : 12
+          }
+        }
+      },
+      y: {
+        ticks: {
+          font: {
+            size: window.innerWidth < 768 ? 10 : 12
+          }
+        }
+      }
+    },
+    plugins: {
+      ...globalChartOptions.plugins,
+      legend: {
+        display: false
+      }
+    }
+  }), []);
+
   // Chart data for Gallos by status
-  const galloStatusChartData = {
+  const galloStatusChartData = useMemo(() => ({
     labels: ['Activos', 'Inactivos', 'Lesionados', 'Retirados'],
     datasets: [
       {
@@ -447,10 +522,10 @@ const Dashboard = ({ setActiveTab }) => {
         borderWidth: 1,
       },
     ],
-  };
+  }), [stats.gallosActivos, stats.gallosInactivos, stats.gallosLesionados, stats.gallosRetirados]);
 
   // Chart data for Peleas results
-  const peleasResultsChartData = {
+  const peleasResultsChartData = useMemo(() => ({
     labels: ['Victorias', 'Derrotas', 'Empates'],
     datasets: [
       {
@@ -459,7 +534,7 @@ const Dashboard = ({ setActiveTab }) => {
         backgroundColor: ['#10B981', '#EF4444', '#F59E0B'],
       },
     ],
-  };
+  }), [stats.victorias, stats.derrotas, stats.empates]);
 
   // Weight trend chart data (for a specific gallo)
   const weightTrendData = useMemo(() => {
@@ -514,11 +589,45 @@ const Dashboard = ({ setActiveTab }) => {
     };
   }, [selectedGalloId, controlPesos, gallos]);
 
-  // Generate options for gallo selector
-
-  // Recent activity chart data
-
-  // Data for the calendar visualization
+  const lineChartOptions = useMemo(() => ({
+    ...globalChartOptions,
+    plugins: {
+      ...globalChartOptions.plugins,
+      legend: {
+        display: window.innerWidth >= 640,
+        labels: {
+          font: {
+            size: window.innerWidth < 768 ? 10 : 12
+          }
+        }
+      }
+    },
+    scales: {
+      y: {
+        title: {
+          display: window.innerWidth >= 640,
+          text: 'Peso (g)',
+          font: {
+            size: window.innerWidth < 768 ? 10 : 12
+          }
+        },
+        ticks: {
+          font: {
+            size: window.innerWidth < 768 ? 9 : 11
+          }
+        }
+      },
+      x: {
+        ticks: {
+          font: {
+            size: window.innerWidth < 768 ? 9 : 11
+          },
+          maxRotation: 45,
+          minRotation: 45
+        }
+      }
+    }
+  }), []);
 
   // Stats específicas del gallo seleccionado
   const selectedGalloStats = useMemo(() => {
@@ -640,9 +749,9 @@ const Dashboard = ({ setActiveTab }) => {
       tendenciaPeso,
       pesosTrimestre
     };
-  }, [selectedGalloId, gallos, entrenamientos, controlPesos, alimentacion, higiene, peleas, cuidadosMedicos]);
+  }, [selectedGalloId, gallos, entrenamientos, controlPesos, alimentacion, higiene, peleas, cuidadosMedicos, calcularEdad]);
 
-  const renderStorageModeInfo = () => {
+  const renderStorageModeInfo = useCallback(() => {
     if (storageMode === 'github') {
       if (isGithubReady) {
         return (
@@ -678,7 +787,7 @@ const Dashboard = ({ setActiveTab }) => {
         </div>
       );
     }
-  };
+  }, [isGithubReady, setActiveTab, storageMode]);
 
   // Combine all events for timeline
   const allEvents = useMemo(() => {
@@ -740,6 +849,13 @@ const Dashboard = ({ setActiveTab }) => {
       .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
   }, [gallos, peleas, entrenamientos, cuidadosMedicos, higiene, filters, selectedGalloId]);
 
+  // Manejadores para controles de UI
+  const handleLoadMoreEvents = useCallback(() => setEventLimit(prev => prev + 5), []);
+  const handleGoToPeleas = useCallback(() => setActiveTab('peleas'), [setActiveTab]);
+  const handleGoToGallos = useCallback(() => setActiveTab('gallos'), [setActiveTab]);
+  const handleGoToLineas = useCallback(() => setActiveTab('lineasGeneticas'), [setActiveTab]);
+  const handleGoToCuidados = useCallback(() => setActiveTab('cuidadosMedicos'), [setActiveTab]);
+
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
@@ -764,7 +880,7 @@ const Dashboard = ({ setActiveTab }) => {
             subtitle={`${stats.gallosActivos} activos (${Math.round((stats.gallosActivos / (stats.totalGallos || 1)) * 100)}%)`}
             icon={<Feather />}
             color="blue"
-            onClick={() => setActiveTab('gallos')}
+            onClick={handleGoToGallos}
           />
           
           {/* Tarjeta de Líneas Genéticas */}
@@ -774,7 +890,7 @@ const Dashboard = ({ setActiveTab }) => {
             subtitle={`Línea más común: ${stats.popularLinea}`}
             icon={<Activity />}
             color="indigo"
-            onClick={() => setActiveTab('lineasGeneticas')}
+            onClick={handleGoToLineas}
           />
           
           {/* Tarjeta de Peleas */}
@@ -784,7 +900,7 @@ const Dashboard = ({ setActiveTab }) => {
             subtitle={`Récord: ${stats.recordPeleas}`}
             icon={<Award />}
             color="blue"
-            onClick={() => setActiveTab('peleas')}
+            onClick={handleGoToPeleas}
           />
           
           {/* Tarjeta de Cuidados Médicos */}
@@ -794,7 +910,7 @@ const Dashboard = ({ setActiveTab }) => {
             subtitle={`${stats.recentCuidados} en últimos 30 días`}
             icon={<Heart />}
             color="indigo"
-            onClick={() => setActiveTab('cuidadosMedicos')}
+            onClick={handleGoToCuidados}
           />
         </div>
 
@@ -806,29 +922,7 @@ const Dashboard = ({ setActiveTab }) => {
             <div className="h-64 md:h-80">
               <Pie 
                 data={galloStatusChartData} 
-                options={{ 
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: {
-                      position: window.innerWidth < 768 ? 'bottom' : 'right',
-                      labels: {
-                        boxWidth: window.innerWidth < 768 ? 12 : 20,
-                        padding: window.innerWidth < 768 ? 8 : 10,
-                        font: {
-                          size: window.innerWidth < 768 ? 10 : 12
-                        }
-                      }
-                    },
-                    tooltip: {
-                      bodyFont: {
-                        size: window.innerWidth < 768 ? 10 : 12
-                      },
-                      titleFont: {
-                        size: window.innerWidth < 768 ? 11 : 14
-                      }
-                    }
-                  }
-                }} 
+                options={pieChartOptions} 
               />
             </div>
           </div>
@@ -839,41 +933,7 @@ const Dashboard = ({ setActiveTab }) => {
             <div className="h-64 md:h-80">
               <Bar 
                 data={peleasResultsChartData} 
-                options={{ 
-                  maintainAspectRatio: false,
-                  indexAxis: 'y',
-                  scales: {
-                    x: {
-                      beginAtZero: true,
-                      ticks: {
-                        precision: 0,
-                        font: {
-                          size: window.innerWidth < 768 ? 10 : 12
-                        }
-                      }
-                    },
-                    y: {
-                      ticks: {
-                        font: {
-                          size: window.innerWidth < 768 ? 10 : 12
-                        }
-                      }
-                    }
-                  },
-                  plugins: {
-                    legend: {
-                      display: false
-                    },
-                    tooltip: {
-                      bodyFont: {
-                        size: window.innerWidth < 768 ? 10 : 12
-                      },
-                      titleFont: {
-                        size: window.innerWidth < 768 ? 11 : 14
-                      }
-                    }
-                  }
-                }} 
+                options={barChartOptions} 
               />
             </div>
           </div>
@@ -902,8 +962,7 @@ const Dashboard = ({ setActiveTab }) => {
 
         {selectedGalloId && selectedGalloStats ? (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            {...fadeInAnimation}
             className="space-y-6"
           >
             {/* Tarjetas con información del gallo */}
@@ -958,52 +1017,7 @@ const Dashboard = ({ setActiveTab }) => {
                 {weightTrendData ? (
                   <Line 
                     data={weightTrendData} 
-                    options={{ 
-                      maintainAspectRatio: false,
-                      plugins: {
-                        legend: {
-                          display: window.innerWidth >= 640,
-                          labels: {
-                            font: {
-                              size: window.innerWidth < 768 ? 10 : 12
-                            }
-                          }
-                        },
-                        tooltip: {
-                          bodyFont: {
-                            size: window.innerWidth < 768 ? 10 : 12
-                          },
-                          titleFont: {
-                            size: window.innerWidth < 768 ? 11 : 14
-                          }
-                        }
-                      },
-                      scales: {
-                        y: {
-                          title: {
-                            display: window.innerWidth >= 640,
-                            text: 'Peso (g)',
-                            font: {
-                              size: window.innerWidth < 768 ? 10 : 12
-                            }
-                          },
-                          ticks: {
-                            font: {
-                              size: window.innerWidth < 768 ? 9 : 11
-                            }
-                          }
-                        },
-                        x: {
-                          ticks: {
-                            font: {
-                              size: window.innerWidth < 768 ? 9 : 11
-                            },
-                            maxRotation: 45,
-                            minRotation: 45
-                          }
-                        }
-                      }
-                    }} 
+                    options={lineChartOptions} 
                   />
                 ) : (
                   <div className="flex h-full items-center justify-center text-gray-400">
@@ -1092,7 +1106,7 @@ const Dashboard = ({ setActiveTab }) => {
                     </div>
                     
                     <button 
-                      onClick={() => setActiveTab('peleas')}
+                      onClick={handleGoToPeleas}
                       className="mt-3 inline-flex items-center text-sm text-indigo-600 hover:text-indigo-800"
                     >
                       Ver todas las peleas <ChevronRight size={16} />
@@ -1173,7 +1187,7 @@ const Dashboard = ({ setActiveTab }) => {
           <div className="mt-3 text-center">
             <button 
               className="text-sm text-indigo-600 hover:underline inline-flex items-center"
-              onClick={() => setEventLimit(prev => prev + 5)}
+              onClick={handleLoadMoreEvents}
             >
               Ver más eventos <ChevronRight size={16} />
             </button>

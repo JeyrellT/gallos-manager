@@ -1,36 +1,19 @@
 // src/components/GalloForm.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { X } from 'lucide-react';
 
 const GalloForm = ({ initialData = {}, lineasGeneticas = [], onSubmit, onCancel, isEditing = false }) => {
   const [formData, setFormData] = useState({
-    nombre: '',
-    raza: '',
-    peso_actual: '',
-    estado: 'Activo',
-    fecha_nacimiento: '',
-    sexo: 'Macho',
-    id_linea: '',
-    ...initialData
+    nombre: initialData.nombre || '',
+    raza: initialData.raza || '',
+    peso_actual: initialData.peso_actual || '',
+    estado: initialData.estado || 'Activo',
+    fecha_nacimiento: initialData.fecha_nacimiento || '',
+    sexo: initialData.sexo || 'Macho',
+    id_linea: initialData.id_linea || '',
   });
   
   const [errors, setErrors] = useState({});
-  
-  // Actualizar formData cuando cambia initialData (para edición)
-  useEffect(() => {
-    if (initialData) {
-      setFormData({
-        nombre: '',
-        raza: '',
-        peso_actual: '',
-        estado: 'Activo',
-        fecha_nacimiento: '',
-        sexo: 'Macho',
-        id_linea: '',
-        ...initialData
-      });
-    }
-  }, [initialData]);
   
   // Manejar cambios en los inputs
   const handleInputChange = (e) => {
