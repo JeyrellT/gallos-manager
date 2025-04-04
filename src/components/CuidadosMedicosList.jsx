@@ -89,30 +89,6 @@ const CuidadosMedicosList = ({ searchTerm, setActiveTab, onSelectGallo }) => {
   };
   
   // Agregar nuevo cuidado médico
-  const handleAddCuidado = (e) => {
-    e.preventDefault();
-    
-    if (!validateForm()) return;
-    
-    const newId = Date.now().toString();
-    const newCuidado = {
-      id_cuidado: newId,
-      ...formData
-    };
-    
-    const updatedCuidados = [...cuidadosMedicos, newCuidado];
-    updateData('Cuidados_Medicos', updatedCuidados);
-    
-    // Resetear formulario
-    setFormData({
-      id_gallo: '',
-      tipo: '',
-      descripcion: '',
-      fecha: ''
-    });
-    setShowAddForm(false);
-    showNotification('Cuidado médico registrado correctamente');
-  };
   
   // Eliminar cuidado médico
   const handleDeleteCuidado = (id) => {
@@ -186,6 +162,23 @@ const CuidadosMedicosList = ({ searchTerm, setActiveTab, onSelectGallo }) => {
     });
     setShowAddForm(false);
     setEditingCuidado(null);
+  };
+
+  const handleViewGallo = (galloId) => {
+    const gallo = gallos.find(g => g.id_gallo === galloId);
+    if (gallo) {
+      // Solo ejecutar setActiveTab si es una función
+      if (typeof setActiveTab === 'function') {
+        setActiveTab('Gallo');
+      } else {
+        console.warn('setActiveTab is not a function. Make sure it is passed as a prop to CuidadosMedicosList component.');
+      }
+      
+      // Solo ejecutar onSelectGallo si es una función
+      if (typeof onSelectGallo === 'function') {
+        onSelectGallo(gallo);
+      }
+    }
   };
 
   return (
@@ -373,13 +366,7 @@ const CuidadosMedicosList = ({ searchTerm, setActiveTab, onSelectGallo }) => {
                         </button>
                         <button
                           className="text-indigo-600 hover:text-indigo-900"
-                          onClick={() => {
-                            const gallo = gallos.find(g => g.id_gallo === cuidado.id_gallo);
-                            if (gallo) {
-                              setActiveTab('Gallo');
-                              onSelectGallo(gallo);
-                            }
-                          }}
+                          onClick={() => handleViewGallo(cuidado.id_gallo)}
                           title="Ver gallo"
                         >
                           <Eye size={18} />

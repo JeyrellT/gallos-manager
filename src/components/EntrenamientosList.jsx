@@ -122,76 +122,6 @@ const EntrenamientosList = ({ searchTerm, setActiveTab, onSelectGallo }) => {
   };
   
   // Agregar nuevo entrenamiento
-  const handleAddEntrenamiento = (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-
-    const isRecurrente = formData.isRecurrente;
-    const batchRecords = [];
-    
-    for (const galloId of formData.selectedGalloIds) {
-      if (isRecurrente) {
-        // Crear múltiples registros basados en la recurrencia
-        let currentDate = new Date(formData.fecha);
-        const endDate = new Date(formData.fechaFinal);
-        
-        // Necesitamos estos valores para cada registro
-        const details = {
-          tipo: formData.tipo,
-          duracion_min: formData.duracion_min ? parseFloat(formData.duracion_min) : null,
-          intensidad: formData.intensidad
-        };
-        
-        while (currentDate <= endDate) {
-          const formattedDate = format(currentDate, 'yyyy-MM-dd');
-          
-          batchRecords.push({
-            id_entrenamiento: `${Date.parse(currentDate)}-${galloId}-ent`, // ID único y específico
-            id_gallo: galloId,
-            fecha: formattedDate,
-            tipo: details.tipo,
-            duracion_min: details.duracion_min,
-            intensidad: details.intensidad
-          });
-          
-          // Avanzar a la siguiente fecha según la frecuencia
-          switch (formData.frecuencia) {
-            case 'diario':
-              currentDate = addDays(currentDate, 1);
-              break;
-            case 'semanal':
-              currentDate = addWeeks(currentDate, 1);
-              break;
-            case 'mensual':
-              currentDate = addMonths(currentDate, 1);
-              break;
-            case 'anual':
-              currentDate = addYears(currentDate, 1);
-              break;
-            default:
-              currentDate = addDays(currentDate, 1);
-          }
-        }
-      } else {
-        // Crear un solo registro normal
-        batchRecords.push({
-          id_entrenamiento: `${Date.now()}-${galloId}-ent`,
-          id_gallo: galloId,
-          tipo: formData.tipo,
-          duracion_min: formData.duracion_min ? parseFloat(formData.duracion_min) : null,
-          intensidad: formData.intensidad,
-          fecha: formData.fecha,
-        });
-      }
-    }
-    
-    const updatedEntrenamientos = [...entrenamientos, ...batchRecords];
-    updateData('Entrenamientos', updatedEntrenamientos);
-    
-    setFormData(initialFormData);
-    setShowAddForm(false);
-    showNotification(`${batchRecords.length} registro(s) de entrenamiento ${isRecurrente ? 'programados' : 'agregados'}.`);
-  };
   
   // Eliminar entrenamiento
   const handleDeleteEntrenamiento = (id) => {
@@ -311,6 +241,23 @@ const EntrenamientosList = ({ searchTerm, setActiveTab, onSelectGallo }) => {
     setFormData(initialFormData);
     setShowAddForm(false);
     setEditingEntrenamiento(null);
+  };
+
+  const handleViewGallo = (galloId) => {
+    const gallo = gallos.find(g => g.id_gallo === galloId);
+    if (gallo) {
+      // Solo ejecutar setActiveTab si es una función
+      if (typeof setActiveTab === 'function') {
+        setActiveTab('Gallo');
+      } else {
+        console.warn('setActiveTab is not a function. Make sure it is passed as a prop to EntrenamientosList component.');
+      }
+      
+      // Solo ejecutar onSelectGallo si es una función
+      if (typeof onSelectGallo === 'function') {
+        onSelectGallo(gallo);
+      }
+    }
   };
 
   return (
@@ -574,13 +521,7 @@ const EntrenamientosList = ({ searchTerm, setActiveTab, onSelectGallo }) => {
                         </button>
                         <button
                           className="text-indigo-600 hover:text-indigo-900"
-                          onClick={() => {
-                            const gallo = gallos.find(g => g.id_gallo === entrenamiento.id_gallo);
-                            if (gallo) {
-                              setActiveTab('Gallo');
-                              onSelectGallo(gallo);
-                            }
-                          }}
+                          onClick={() => handleViewGallo(entrenamiento.id_gallo)}
                           title="Ver gallo"
                         >
                           <Eye size={18} />

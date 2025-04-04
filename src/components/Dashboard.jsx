@@ -803,14 +803,29 @@ const Dashboard = ({ setActiveTab }) => {
           {/* Gráfico de Estado de Gallos (Pie chart) */}
           <div className="bg-white rounded-lg shadow-sm p-6">
             <h3 className="text-lg font-medium text-gray-700 mb-4">Estado General de Gallos</h3>
-            <div className="h-64">
+            <div className="h-64 md:h-80">
               <Pie 
                 data={galloStatusChartData} 
                 options={{ 
                   maintainAspectRatio: false,
                   plugins: {
                     legend: {
-                      position: 'right',
+                      position: window.innerWidth < 768 ? 'bottom' : 'right',
+                      labels: {
+                        boxWidth: window.innerWidth < 768 ? 12 : 20,
+                        padding: window.innerWidth < 768 ? 8 : 10,
+                        font: {
+                          size: window.innerWidth < 768 ? 10 : 12
+                        }
+                      }
+                    },
+                    tooltip: {
+                      bodyFont: {
+                        size: window.innerWidth < 768 ? 10 : 12
+                      },
+                      titleFont: {
+                        size: window.innerWidth < 768 ? 11 : 14
+                      }
                     }
                   }
                 }} 
@@ -821,7 +836,7 @@ const Dashboard = ({ setActiveTab }) => {
           {/* Gráfico de Resultados de Peleas (Barras) */}
           <div className="bg-white rounded-lg shadow-sm p-6">
             <h3 className="text-lg font-medium text-gray-700 mb-4">Resultados Generales de Peleas</h3>
-            <div className="h-64">
+            <div className="h-64 md:h-80">
               <Bar 
                 data={peleasResultsChartData} 
                 options={{ 
@@ -831,7 +846,30 @@ const Dashboard = ({ setActiveTab }) => {
                     x: {
                       beginAtZero: true,
                       ticks: {
-                        precision: 0
+                        precision: 0,
+                        font: {
+                          size: window.innerWidth < 768 ? 10 : 12
+                        }
+                      }
+                    },
+                    y: {
+                      ticks: {
+                        font: {
+                          size: window.innerWidth < 768 ? 10 : 12
+                        }
+                      }
+                    }
+                  },
+                  plugins: {
+                    legend: {
+                      display: false
+                    },
+                    tooltip: {
+                      bodyFont: {
+                        size: window.innerWidth < 768 ? 10 : 12
+                      },
+                      titleFont: {
+                        size: window.innerWidth < 768 ? 11 : 14
                       }
                     }
                   }
@@ -916,34 +954,52 @@ const Dashboard = ({ setActiveTab }) => {
               <h3 className="text-lg font-medium text-gray-700 mb-4">
                 Tendencia de Peso - {selectedGalloStats.nombre}
               </h3>
-              <div className="h-64">
+              <div className="h-64 md:h-80">
                 {weightTrendData ? (
                   <Line 
                     data={weightTrendData} 
                     options={{ 
                       maintainAspectRatio: false,
                       plugins: {
-                        zoom: {
-                          pan: {
-                            enabled: true,
-                            mode: 'x'
+                        legend: {
+                          display: window.innerWidth >= 640,
+                          labels: {
+                            font: {
+                              size: window.innerWidth < 768 ? 10 : 12
+                            }
+                          }
+                        },
+                        tooltip: {
+                          bodyFont: {
+                            size: window.innerWidth < 768 ? 10 : 12
                           },
-                          zoom: {
-                            wheel: {
-                              enabled: true,
-                            },
-                            pinch: {
-                              enabled: true
-                            },
-                            mode: 'x',
+                          titleFont: {
+                            size: window.innerWidth < 768 ? 11 : 14
                           }
                         }
                       },
                       scales: {
                         y: {
                           title: {
-                            display: true,
-                            text: 'Peso (g)'
+                            display: window.innerWidth >= 640,
+                            text: 'Peso (g)',
+                            font: {
+                              size: window.innerWidth < 768 ? 10 : 12
+                            }
+                          },
+                          ticks: {
+                            font: {
+                              size: window.innerWidth < 768 ? 9 : 11
+                            }
+                          }
+                        },
+                        x: {
+                          ticks: {
+                            font: {
+                              size: window.innerWidth < 768 ? 9 : 11
+                            },
+                            maxRotation: 45,
+                            minRotation: 45
                           }
                         }
                       }

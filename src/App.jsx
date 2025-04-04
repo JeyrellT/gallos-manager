@@ -43,11 +43,23 @@ const AppContent = () => {
       case 'Linea_Genetica':
         return <LineaGeneticaList searchTerm={searchTerm} />;
       case 'Peleas':
-        return <PeleasList searchTerm={searchTerm} />;
+        return <PeleasList 
+          searchTerm={searchTerm} 
+          setActiveTab={setActiveTab} 
+          onSelectGallo={setSelectedGallo}
+        />;
       case 'Cuidados_Medicos':
-        return <CuidadosMedicosList searchTerm={searchTerm} />;
+        return <CuidadosMedicosList 
+          searchTerm={searchTerm} 
+          setActiveTab={setActiveTab} 
+          onSelectGallo={setSelectedGallo}
+        />;
       case 'Entrenamientos':
-        return <EntrenamientosList searchTerm={searchTerm} />;
+        return <EntrenamientosList 
+          searchTerm={searchTerm} 
+          setActiveTab={setActiveTab} 
+          onSelectGallo={setSelectedGallo} 
+        />;
       case 'Alimentacion':
         return <AlimentacionList searchTerm={searchTerm} />;
       case 'Higiene':

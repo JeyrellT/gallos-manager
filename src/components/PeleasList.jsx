@@ -100,46 +100,6 @@ const PeleasList = ({ searchTerm, setActiveTab, onSelectGallo }) => {
   };
   
   // Agregar nueva pelea
-  const handleAddPelea = (e) => {
-    e.preventDefault();
-    
-    if (!validateForm()) return;
-    
-    const newId = Date.now().toString();
-    const newPelea = {
-      id_pelea: newId,
-      ...formData,
-      duracion_min: formData.duracion_min ? parseFloat(formData.duracion_min) : null,
-      peso_antes: formData.peso_antes ? parseFloat(formData.peso_antes) : null,
-      peso_despues: formData.peso_despues ? parseFloat(formData.peso_despues) : null
-    };
-    
-    const updatedPeleas = [...peleas, newPelea];
-    updateData('Peleas', updatedPeleas);
-    
-    // Actualizar peso del gallo si se proporcionó el peso después
-    if (formData.peso_despues) {
-      const updatedGallos = gallos.map(gallo => 
-        gallo.id_gallo === formData.id_gallo 
-          ? { ...gallo, peso_actual: parseFloat(formData.peso_despues) } 
-          : gallo
-      );
-      updateData('Gallo', updatedGallos);
-    }
-    
-    // Resetear formulario
-    setFormData({
-      id_gallo: '',
-      fecha: '',
-      resultado: 'Victoria',
-      duracion_min: '',
-      peso_antes: '',
-      peso_despues: '',
-      observaciones: ''
-    });
-    setShowAddForm(false);
-    showNotification('Pelea registrada correctamente');
-  };
   
   // Eliminar pelea
   const handleDeletePelea = (id) => {
@@ -250,6 +210,24 @@ const PeleasList = ({ searchTerm, setActiveTab, onSelectGallo }) => {
     });
     setShowAddForm(false);
     setEditingPelea(null);
+  };
+
+  // Modificar el botón "Ver gallo" (Eye) para comprobar si setActiveTab es una función
+  const handleViewGallo = (galloId) => {
+    const gallo = gallos.find(g => g.id_gallo === galloId);
+    if (gallo) {
+      // Solo ejecutar setActiveTab si es una función
+      if (typeof setActiveTab === 'function') {
+        setActiveTab('Gallo');
+      } else {
+        console.warn('setActiveTab is not a function. Make sure it is passed as a prop to PeleasList component.');
+      }
+      
+      // Solo ejecutar onSelectGallo si es una función
+      if (typeof onSelectGallo === 'function') {
+        onSelectGallo(gallo);
+      }
+    }
   };
 
   return (
@@ -494,13 +472,7 @@ const PeleasList = ({ searchTerm, setActiveTab, onSelectGallo }) => {
                         </button>
                         <button
                           className="text-indigo-600 hover:text-indigo-900"
-                          onClick={() => {
-                            const gallo = gallos.find(g => g.id_gallo === pelea.id_gallo);
-                            if (gallo) {
-                              setActiveTab('Gallo');
-                              onSelectGallo(gallo);
-                            }
-                          }}
+                          onClick={() => handleViewGallo(pelea.id_gallo)}
                           title="Ver gallo"
                         >
                           <Eye size={18} />

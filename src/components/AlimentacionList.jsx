@@ -126,24 +126,24 @@ const AlimentacionList = ({ searchTerm }) => {
     return true;
   };
 
-  const handleAddAlimentacion = (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
+  // const handleAddAlimentacion = (e) => {
+  //   e.preventDefault();
+  //   if (!validateForm()) return;
 
-    const newRecords = formData.selectedGalloIds.map((id) => ({
-      id_alimentacion: Date.now().toString() + id, // Unique ID per gallo
-      id_gallo: id,
-      tipo_alimento: formData.tipo_alimento,
-      cantidad_g: parseFloat(formData.cantidad_g),
-      fecha: formData.fecha,
-      observaciones: formData.observaciones,
-    }));
+  //   const newRecords = formData.selectedGalloIds.map((id) => ({
+  //     id_alimentacion: Date.now().toString() + id, // Unique ID per gallo
+  //     id_gallo: id,
+  //     tipo_alimento: formData.tipo_alimento,
+  //     cantidad_g: parseFloat(formData.cantidad_g),
+  //     fecha: formData.fecha,
+  //     observaciones: formData.observaciones,
+  //   }));
 
-    updateData('Alimentacion', [...alimentacion, ...newRecords]);
-    setFormData({ selectedGalloIds: [], tipo_alimento: '', cantidad_g: '', fecha: '', observaciones: '' });
-    setShowAddForm(false);
-    showNotification(`${newRecords.length} registros de alimentación agregados`);
-  };
+  //   updateData('Alimentacion', [...alimentacion, ...newRecords]);
+  //   setFormData({ selectedGalloIds: [], tipo_alimento: '', cantidad_g: '', fecha: '', observaciones: '' });
+  //   setShowAddForm(false);
+  //   showNotification(`${newRecords.length} registros de alimentación agregados`);
+  // };
 
   const handleDeleteAlimentacion = (id) => {
     if (!window.confirm('¿Está seguro de eliminar este registro de alimentación?')) return;

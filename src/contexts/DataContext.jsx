@@ -29,6 +29,105 @@ export const DataProvider = ({ children }) => {
   const [isGithubReady, setIsGithubReady] = useState(false); // Indica si las credenciales están configuradas
 
   /**
+   * Muestra una notificación al usuario
+   */
+  const showNotification = useCallback((message, type = 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => {
+      setNotification(null);
+    }, 4000); // Un poco más de tiempo
+  }, []);
+
+  /**
+   * Sincroniza los datos locales con los de GitHub (si está en modo github)
+   * Carga los datos desde GitHub, sobrescribiendo los locales.
+   */
+  const synchronizeWithGitHub = useCallback(async (isInitialLoad = false) => {
+    if (storageMode !== 'github' || !isGithubReady) {
+      if (!isInitialLoad) showNotification('La sincronización con GitHub no está activada o configurada.', 'warning');
+      return;
+    }
+
+    console.log('Iniciando sincronización con GitHub...');
+    setIsLoading(true);
+    setSyncStatus('syncing');
+    let syncError = null;
+
+    try {
+      const entities = [
+        { name: 'Gallo', setter: setGallos },
+        { name: 'Linea_Genetica', setter: setLineasGeneticas },
+        { name: 'Cuidados_Medicos', setter: setCuidadosMedicos },
+        { name: 'Entrenamientos', setter: setEntrenamientos },
+        { name: 'Alimentacion', setter: setAlimentacion },
+        { name: 'Higiene', setter: setHigiene },
+        { name: 'Peleas', setter: setPeleas },
+        { name: 'Control_Pesos', setter: setControlPesos },
+      ];
+
+      for (const entity of entities) {
+        try {
+          console.log(`Sincronizando entidad: ${entity.name}`);
+          const { data, sha } = await githubService.getData(entity.name);
+          if (data && Array.isArray(data)) {
+            console.log(`Datos recibidos para ${entity.name}:`, data.length, "registros");
+            entity.setter(data);
+            storageService.saveData(entity.name, data);
+          } else if (sha === null && data === null) {
+            console.warn(`Archivo no encontrado en GitHub para ${entity.name}, asegurando estructura...`);
+            await githubService.saveData(entity.name, []);
+            entity.setter([]);
+            storageService.saveData(entity.name, []);
+          } else {
+            console.warn(`Datos no válidos o vacíos recibidos para ${entity.name}`);
+          }
+        } catch (entityError) {
+          console.error(`Error sincronizando ${entity.name}:`, entityError);
+          syncError = entityError;
+        }
+      }
+
+      if (syncError) {
+        throw syncError;
+      }
+
+      setSyncStatus('synced');
+      if (!isInitialLoad) showNotification('Datos sincronizados con GitHub correctamente', 'success');
+      console.log('Sincronización con GitHub completada.');
+
+    } catch (error) {
+      console.error('Error general durante la sincronización con GitHub:', error);
+      setSyncStatus('error');
+      if (!isInitialLoad) showNotification(`Error al sincronizar datos: ${error.message}`, 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [storageMode, isGithubReady, showNotification, setGallos, setLineasGeneticas, setCuidadosMedicos, setEntrenamientos, setAlimentacion, setHigiene, setPeleas, setControlPesos]);
+
+  /**
+   * Actualiza el modo de almacenamiento y lo guarda
+   */
+  const updateStorageMode = useCallback(async (mode) => {
+    if (mode !== 'local' && mode !== 'github') return;
+
+    // Si se cambia a GitHub y no hay credenciales, no hacer nada (o mostrar error)
+    if (mode === 'github' && (!githubConfig.token || !githubConfig.owner || !githubConfig.repo)) {
+      showNotification('Configure las credenciales de GitHub antes de activar la sincronización.', 'warning');
+      return; // No cambia el modo
+    }
+
+    console.log(`Cambiando modo de almacenamiento a: ${mode}`);
+    setStorageMode(mode);
+    storageService.saveSetting('storageMode', mode);
+    showNotification(`Modo de almacenamiento cambiado a: ${mode === 'github' ? 'Online (GitHub)' : 'Offline (Local)'}`, 'info');
+
+    // Si se cambia a GitHub y hay credenciales, intentar sincronizar
+    if (mode === 'github' && isGithubReady) {
+      await synchronizeWithGitHub();
+    }
+  }, [githubConfig, isGithubReady, showNotification, synchronizeWithGitHub]);
+
+  /**
    * Carga los datos iniciales de localStorage y la configuración
    */
   const loadInitialData = useCallback(async () => {
@@ -69,50 +168,16 @@ export const DataProvider = ({ children }) => {
         setIsGithubReady(false);
       }
     } else {
-       setIsGithubReady(false); // No hay credenciales o no está en modo github
+      setIsGithubReady(false); // No hay credenciales o no está en modo github
     }
 
     setIsLoading(false);
     console.log('Datos iniciales cargados. Modo:', savedMode);
-  }, []); // No dependencies, should run once on mount
+  }, [synchronizeWithGitHub, updateStorageMode, showNotification]);
 
   useEffect(() => {
     loadInitialData();
   }, [loadInitialData]); // Run on mount
-
-  /**
-   * Muestra una notificación al usuario
-   */
-  const showNotification = (message, type = 'success') => {
-    setNotification({ message, type });
-    setTimeout(() => {
-      setNotification(null);
-    }, 4000); // Un poco más de tiempo
-  };
-
-   /**
-   * Actualiza el modo de almacenamiento y lo guarda
-   */
-   const updateStorageMode = async (mode) => {
-       if (mode !== 'local' && mode !== 'github') return;
-
-       // Si se cambia a GitHub y no hay credenciales, no hacer nada (o mostrar error)
-       if (mode === 'github' && (!githubConfig.token || !githubConfig.owner || !githubConfig.repo)) {
-           showNotification('Configure las credenciales de GitHub antes de activar la sincronización.', 'warning');
-           return; // No cambia el modo
-       }
-
-       console.log(`Cambiando modo de almacenamiento a: ${mode}`);
-       setStorageMode(mode);
-       storageService.saveSetting('storageMode', mode);
-       showNotification(`Modo de almacenamiento cambiado a: ${mode === 'github' ? 'Online (GitHub)' : 'Offline (Local)'}`, 'info');
-
-       // Si se cambia a GitHub y hay credenciales, intentar sincronizar
-       if (mode === 'github' && isGithubReady) {
-            await synchronizeWithGitHub();
-       }
-   };
-
 
   /**
    * Guarda las credenciales de GitHub y activa el modo si es exitoso
@@ -167,78 +232,6 @@ export const DataProvider = ({ children }) => {
   };
 
   /**
-   * Sincroniza los datos locales con los de GitHub (si está en modo github)
-   * Carga los datos desde GitHub, sobrescribiendo los locales.
-   */
-  const synchronizeWithGitHub = useCallback(async (isInitialLoad = false) => {
-    if (storageMode !== 'github' || !isGithubReady) {
-      if (!isInitialLoad) showNotification('La sincronización con GitHub no está activada o configurada.', 'warning');
-      return;
-    }
-
-    console.log('Iniciando sincronización con GitHub...');
-    setIsLoading(true);
-    setSyncStatus('syncing');
-    let syncError = null;
-
-    try {
-      const entities = [
-        { name: 'Gallo', setter: setGallos },
-        { name: 'Linea_Genetica', setter: setLineasGeneticas },
-        { name: 'Cuidados_Medicos', setter: setCuidadosMedicos },
-        { name: 'Entrenamientos', setter: setEntrenamientos },
-        { name: 'Alimentacion', setter: setAlimentacion },
-        { name: 'Higiene', setter: setHigiene },
-        { name: 'Peleas', setter: setPeleas },
-        { name: 'Control_Pesos', setter: setControlPesos },
-      ];
-
-      for (const entity of entities) {
-        try {
-            console.log(`Sincronizando entidad: ${entity.name}`);
-            const { data, sha } = await githubService.getData(entity.name);
-            if (data && Array.isArray(data)) {
-                console.log(`Datos recibidos para ${entity.name}:`, data.length, "registros");
-                entity.setter(data); // Actualiza estado de React
-                storageService.saveData(entity.name, data); // Guarda en localStorage como caché local
-            } else if (sha === null && data === null) {
-                 console.warn(`Archivo no encontrado en GitHub para ${entity.name}, asegurando estructura...`);
-                 await githubService.saveData(entity.name, []); // Crear archivo vacío si no existe
-                 entity.setter([]);
-                 storageService.saveData(entity.name, []);
-            }
-             else {
-                console.warn(`Datos no válidos o vacíos recibidos para ${entity.name}`);
-                 // Podríamos mantener los datos locales o limpiarlos. Mantener es más seguro.
-                 // entity.setter([]);
-                 // storageService.saveData(entity.name, []);
-            }
-        } catch (entityError) {
-             console.error(`Error sincronizando ${entity.name}:`, entityError);
-             syncError = entityError; // Guardar el primer error encontrado
-             // Podrías decidir si continuar con otras entidades o detener la sincronización
-        }
-      }
-
-      if (syncError) {
-          throw syncError; // Relanzar el primer error encontrado después de intentar todas las entidades
-      }
-
-      setSyncStatus('synced');
-      if (!isInitialLoad) showNotification('Datos sincronizados con GitHub correctamente', 'success');
-      console.log('Sincronización con GitHub completada.');
-
-    } catch (error) {
-      console.error('Error general durante la sincronización con GitHub:', error);
-      setSyncStatus('error');
-      if (!isInitialLoad) showNotification(`Error al sincronizar datos: ${error.message}`, 'error');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [storageMode, isGithubReady]); // Dependencias de useCallback
-
-
-  /**
    * Guarda los datos actuales en GitHub (si está en modo github)
    */
   const saveDataToGitHub = async () => {
@@ -264,18 +257,18 @@ export const DataProvider = ({ children }) => {
       };
 
       for (const entityName in allData) {
-         try {
-            console.log(`Guardando entidad: ${entityName}`);
-            await githubService.saveData(entityName, allData[entityName]);
-             console.log(`Entidad ${entityName} guardada en GitHub.`);
-         } catch (entityError) {
-             console.error(`Error guardando ${entityName} en GitHub:`, entityError);
-             saveError = entityError; // Guardar el primer error
-         }
+        try {
+          console.log(`Guardando entidad: ${entityName}`);
+          await githubService.saveData(entityName, allData[entityName]);
+          console.log(`Entidad ${entityName} guardada en GitHub.`);
+        } catch (entityError) {
+          console.error(`Error guardando ${entityName} en GitHub:`, entityError);
+          saveError = entityError; // Guardar el primer error
+        }
       }
 
-       if (saveError) {
-          throw saveError; // Relanzar el primer error
+      if (saveError) {
+        throw saveError; // Relanzar el primer error
       }
 
       setSyncStatus('synced');
@@ -331,7 +324,7 @@ export const DataProvider = ({ children }) => {
         setSyncStatus('error');
         showNotification(`Error al guardar ${entityName} en GitHub: ${error.message}. Los datos locales se guardaron.`, 'warning');
       } finally {
-         setIsLoading(false);
+        setIsLoading(false);
       }
     }
   };
@@ -390,13 +383,12 @@ export const DataProvider = ({ children }) => {
     return JSON.stringify(allData, null, 2);
   };
 
-   /**
+  /**
    * Obtiene las credenciales de GitHub (para mostrarlas en Settings)
    */
-   const getGitHubCredentials = () => {
-       return githubConfig;
-   };
-
+  const getGitHubCredentials = () => {
+    return githubConfig;
+  };
 
   // Valores proporcionados por el contexto
   const contextValue = {

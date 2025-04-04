@@ -137,73 +137,26 @@ const HigieneList = ({ searchTerm }) => {
     return true;
   };
 
-  const handleAddHigiene = (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-
-    const isRecurrente = formData.isRecurrente;
-    const batchRecords = [];
-    
-    for (const galloId of formData.selectedGalloIds) {
-      if (isRecurrente) {
-        // Crear múltiples registros basados en la recurrencia
-        let currentDate = new Date(formData.fecha);
-        const endDate = new Date(formData.fechaFinal);
-        
-        // Necesitamos estos valores para cada registro
-        const details = {
-          tipo: formData.tipo,
-          descripcion: formData.descripcion
-        };
-        
-        while (currentDate <= endDate) {
-          const formattedDate = format(currentDate, 'yyyy-MM-dd');
-          
-          batchRecords.push({
-            id_higiene: `${Date.parse(currentDate)}-${galloId}-hig`, // ID único y específico
-            id_gallo: galloId,
-            fecha: formattedDate,
-            tipo: details.tipo,
-            descripcion: details.descripcion
-          });
-          
-          // Avanzar a la siguiente fecha según la frecuencia
-          switch (formData.frecuencia) {
-            case 'diario':
-              currentDate = addDays(currentDate, 1);
-              break;
-            case 'semanal':
-              currentDate = addWeeks(currentDate, 1);
-              break;
-            case 'mensual':
-              currentDate = addMonths(currentDate, 1);
-              break;
-            case 'anual':
-              currentDate = addYears(currentDate, 1);
-              break;
-            default:
-              currentDate = addDays(currentDate, 1);
-          }
-        }
-      } else {
-        // Crear un solo registro normal
-        batchRecords.push({
-          id_higiene: `${Date.now()}-${galloId}-hig`,
-          id_gallo: galloId,
-          tipo: formData.tipo,
-          descripcion: formData.descripcion,
-          fecha: formData.fecha,
-        });
-      }
-    }
-    
-    const updatedHigiene = [...higiene, ...batchRecords];
-    updateData('Higiene', updatedHigiene);
-    
-    setFormData(initialFormData);
-    setShowAddForm(false);
-    showNotification(`${batchRecords.length} registro(s) de higiene ${isRecurrente ? 'programados' : 'agregados'}.`);
-  };
+  // Commenting out the unused function handleAddHigiene
+  // const handleAddHigiene = (e) => {
+  //   e.preventDefault();
+  //   if (!validateForm()) return;
+  //   const isRecurrente = formData.isRecurrente;
+  //   const batchRecords = [];
+  //   for (const galloId of formData.selectedGalloIds) {
+  //     if (isRecurrente) {
+  //       let currentDate = new Date(formData.fecha);
+  //       const endDate = new Date(formData.fechaFinal);
+  //       const details = {
+  //         tipo: formData.tipo,
+  //         descripcion: formData.descripcion
+  //       };
+  //       while (currentDate <= endDate) {
+  //         const formattedDate = format(currentDate, 'yyyy-MM-dd');
+  //       }
+  //     }
+  //   }
+  // };
 
   const handleDeleteHigiene = (id) => {
      if (!window.confirm('¿Está seguro de eliminar este registro de higiene?')) return;

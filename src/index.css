@@ -97,4 +97,67 @@ body {
   .loading-pulse {
     @apply w-4 h-4;
   }
+  
+  /* Mejor espaciado para elementos de formulario en móviles */
+  input, select, textarea {
+    @apply text-sm py-2;
+  }
+  
+  /* Mejorar visualización de botones en móviles */
+  button, .btn {
+    @apply text-sm py-2 px-3;
+  }
+  
+  /* Asegurar que el contenido no se desborde en móviles */
+  .overflow-auto-mobile {
+    @apply overflow-auto;
+  }
+  
+  /* Mejorar visibilidad de las tarjetas en dispositivos móviles */
+  .card-mobile {
+    @apply shadow-sm rounded-lg bg-white p-3 mb-3;
+  }
+  
+  /* Reducir padding para conservar espacio en pantallas pequeñas */
+  .mobile-p-reduced {
+    @apply p-3;
+  }
+}
+
+/* Mejorar la experiencia táctil en dispositivos móviles */
+@media (hover: none) and (pointer: coarse) {
+  /* Aumentar área de clic para elementos interactivos */
+  button, .btn, a, select, input[type="checkbox"], input[type="radio"] {
+    @apply p-2 min-h-[44px] min-w-[44px];
+  }
+  
+  /* Reducir el efecto hover que puede ser problemático en dispositivos táctiles */
+  .hover\:bg-gray-100:hover {
+    @apply bg-transparent;
+  }
+  
+  /* Separación extra para elementos en listas para facilitar tap */
+  .mobile-list-item {
+    @apply py-3 border-b border-gray-100;
+  }
+}
+
+/* Utilidades para ocultar/mostrar elementos basados en tamaño de pantalla */
+.mobile-only {
+  @apply block md:hidden;
+}
+
+.desktop-only {
+  @apply hidden md:block;
+}
+
+/* Ajustes específicos para orientación vertical en móviles */
+@media screen and (max-width: 640px) and (orientation: portrait) {
+  .mobile-portrait-stack {
+    @apply flex-col;
+  }
+  
+  .mobile-portrait-full {
+    @apply w-full;
+  }
 }
