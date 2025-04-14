@@ -1,13 +1,13 @@
 {
   "files": {
-    "main.css": "/gallos-manager/static/css/main.b3e78be3.css",
-    "main.js": "/gallos-manager/static/js/main.eb6fbf05.js",
+    "main.css": "/gallos-manager/static/css/main.4c9a0417.css",
+    "main.js": "/gallos-manager/static/js/main.a0260646.js",
     "index.html": "/gallos-manager/index.html",
-    "main.b3e78be3.css.map": "/gallos-manager/static/css/main.b3e78be3.css.map",
-    "main.eb6fbf05.js.map": "/gallos-manager/static/js/main.eb6fbf05.js.map"
+    "main.4c9a0417.css.map": "/gallos-manager/static/css/main.4c9a0417.css.map",
+    "main.a0260646.js.map": "/gallos-manager/static/js/main.a0260646.js.map"
   },
   "entrypoints": [
-    "static/css/main.b3e78be3.css",
-    "static/js/main.eb6fbf05.js"
+    "static/css/main.4c9a0417.css",
+    "static/js/main.a0260646.js"
   ]
 }
