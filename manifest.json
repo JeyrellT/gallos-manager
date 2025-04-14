@@ -1,6 +1,7 @@
 {
     "short_name": "Gallos Manager",
     "name": "Sistema de Gestión para Gallos",
+    "description": "Sistema de gestión profesional para criadores de gallos",
     "icons": [
       {
         "src": "favicon.ico",
@@ -10,16 +11,22 @@
       {
         "src": "logo192.png",
         "type": "image/png",
-        "sizes": "192x192"
+        "sizes": "192x192",
+        "purpose": "any maskable"
       },
       {
         "src": "logo512.png",
         "type": "image/png",
-        "sizes": "512x512"
+        "sizes": "512x512",
+        "purpose": "any maskable"
       }
     ],
     "start_url": ".",
+    "scope": "/",
     "display": "standalone",
     "theme_color": "#4F46E5",
-    "background_color": "#F9FAFB"
-  }
+    "background_color": "#F9FAFB",
+    "orientation": "portrait",
+    "categories": ["business", "productivity"],
+    "prefer_related_applications": false
+}
